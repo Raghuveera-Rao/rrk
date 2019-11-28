@@ -1,0 +1,20 @@
+# Copyright (c) 2017 Dell Inc., or its subsidiaries. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+---
+- name: Copy config.properties
+  copy:
+      src: data/config.properties
+      dest: /opt/pravega/conf/config.properties
+
+- name: Set publish IP address
+  shell: echo pravegaservice.publishedIPAddress=$(ifconfig | awk '/inet addr/{print substr($2,6)}' | sed -n 1p) >> /opt/pravega/conf/config.properties
+  sudo: yes
+
+- name: Run hosts
+  shell: nohup /opt/pravega/bin/pravega-segmentstore 2>&1 &> /tmp/host.log &
+  sudo: yes
