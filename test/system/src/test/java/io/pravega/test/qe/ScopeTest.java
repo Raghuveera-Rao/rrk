@@ -34,14 +34,14 @@ import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang.math.RandomUtils;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
 import lombok.extern.slf4j.Slf4j;
 import mesosphere.marathon.client.MarathonException;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
@@ -59,6 +59,8 @@ public class ScopeTest extends AbstractSystemTest {
     private WebTarget webTarget;
     private String restServerURI;
     private String resourceURl;
+    private Service conService;
+    private URI controllerRESTUri;
 
     public ScopeTest() {
 
@@ -89,68 +91,70 @@ public class ScopeTest extends AbstractSystemTest {
         ensureSegmentStoreRunning(zkUri, controllerUri);
     }
 
-    @Test
-    public void ScopeRelatedTests() {
-
-        Service conService = Utils.createPravegaControllerService(null);
+    @BeforeClass
+    public void setup() {
+        conService = Utils.createPravegaControllerService(null);
         List<URI> ctlURIs = conService.getServiceDetails();
-        URI controllerRESTUri = ctlURIs.get(1);
-        Invocation.Builder builder;
-        Response response;
-
+        controllerRESTUri = ctlURIs.get(1);
         restServerURI = "http://" + controllerRESTUri.getHost() + ":" + controllerRESTUri.getPort();
         log.info("REST Server URI: {}", restServerURI);
+    }
 
-        // TEST REST server status, ping test
-        resourceURl = new StringBuilder(restServerURI).append("/ping").toString();
-        webTarget = client.target(resourceURl);
-        builder = webTarget.request();
-        response = builder.get();
-        assertEquals("Ping test", OK.getStatusCode(), response.getStatus());
-        log.info("REST Server is running. Ping successful.");
-
-        // Test _system scope is present by default
+    // Test _system scope is present by default
+    @Test
+    public void defaultScopePresent() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + "_system").toString();
-        response = client.target(resourceURl).request().get();
+        Response response = client.target(resourceURl).request().get();
         assertEquals("Get scope status", OK.getStatusCode(), response.getStatus());
         assertEquals("Get scope _system response", "_system", response.readEntity(ScopeProperty.class).getScopeName());
         log.info("_system scope is present");
+    }
 
-        // Test delete _system scope
+    // Test delete _system scope
+    @Test
+    public void deleteSystemScope(){
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + "_system").toString();
-        response = client.target(resourceURl).request().delete();
+        Response response = client.target(resourceURl).request().delete();
         assertEquals("Delete scope _system status", PRECONDITION_FAILED.getStatusCode(), response.getStatus());
         log.info("Delete scope _system not possible, which is expected");
+    }
+
+    // Test create scope having alphanumeric characters
+    @Test
+    public void alphaNumericScope(){
+        // POST http://controllerURI:Port/v1/scopes
+        CreateScopeRequest createScopeRequest = new CreateScopeRequest();
+        String scopeName = RandomStringUtils.randomAlphanumeric(5)+"12";
+
+        // TEST CreateScope
+        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
+        webTarget = client.target(resourceURl);
+
+        createScopeRequest.setScopeName(scopeName);
+        Invocation.Builder builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
+        Response response = builder.post(Entity.json(createScopeRequest));
+
+        assertEquals("Create scope status", CREATED.getStatusCode(), response.getStatus());
+        Assert.assertEquals("Create scope response", scopeName, response.readEntity(ScopeProperty.class).getScopeName());
+        log.info("Create scope: {} successful ", scopeName);
+    }
+
+    // Test create scope containing number
+    @Test
+    public void onlyNumberScope(){
+        int random_int = RandomUtils.nextInt();
+
+        String scopeName = String.valueOf(random_int);
+        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
+        webTarget = client.target(resourceURl);
 
         CreateScopeRequest createScopeRequest = new CreateScopeRequest();
-        String scopeName = RandomStringUtils.randomAlphanumeric(10);
-
-        // TEST CreateScope POST http://controllerURI:Port/v1/scopes
-        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
-        webTarget = client.target(resourceURl);
-
         createScopeRequest.setScopeName(scopeName);
-        builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
-        response = builder.post(Entity.json(createScopeRequest));
+        Invocation.Builder builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
+        Response response = builder.post(Entity.json(createScopeRequest));
 
         assertEquals("Create scope status", CREATED.getStatusCode(), response.getStatus());
         Assert.assertEquals("Create scope response", scopeName, response.readEntity(ScopeProperty.class).getScopeName());
         log.info("Create scope: {} successful ", scopeName);
-
-        // Test create scope containing number
-        scopeName = RandomStringUtils.randomAlphanumeric(4);
-        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
-        webTarget = client.target(resourceURl);
-
-        createScopeRequest = new CreateScopeRequest();
-        createScopeRequest.setScopeName(scopeName);
-        builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
-        response = builder.post(Entity.json(createScopeRequest));
-
-        assertEquals("Create scope status", CREATED.getStatusCode(), response.getStatus());
-        Assert.assertEquals("Create scope response", scopeName, response.readEntity(ScopeProperty.class).getScopeName());
-        log.info("Create scope: {} successful ", scopeName);
-
-        log.info("Test ScopeRelatedTests passed successfully!");
     }
 }
