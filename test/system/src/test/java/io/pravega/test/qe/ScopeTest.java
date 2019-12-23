@@ -57,10 +57,10 @@ public class ScopeTest extends AbstractSystemTest {
 
     private final Client client;
     private WebTarget webTarget;
-    private String restServerURI;
     private String resourceURl;
-    private Service conService;
-    private URI controllerRESTUri;
+    private static String restServerURI;
+    private static Service conService;
+    private static URI controllerRESTUri;
 
     public ScopeTest() {
 
@@ -92,7 +92,7 @@ public class ScopeTest extends AbstractSystemTest {
     }
 
     @BeforeClass
-    public void setup() {
+    public static void setup() {
         conService = Utils.createPravegaControllerService(null);
         List<URI> ctlURIs = conService.getServiceDetails();
         controllerRESTUri = ctlURIs.get(1);
