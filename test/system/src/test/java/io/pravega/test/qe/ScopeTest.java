@@ -91,8 +91,8 @@ public class ScopeTest extends AbstractSystemTest {
         ensureSegmentStoreRunning(zkUri, controllerUri);
     }
 
-    @BeforeClass
-    public static void setup() {
+    @Before
+    public void setup() {
         conService = Utils.createPravegaControllerService(null);
         List<URI> ctlURIs = conService.getServiceDetails();
         controllerRESTUri = ctlURIs.get(1);
@@ -127,6 +127,7 @@ public class ScopeTest extends AbstractSystemTest {
         String scopeName = RandomStringUtils.randomAlphanumeric(5)+"12";
 
         // TEST CreateScope
+        System.out.println("---- restServerURI ----"+restServerURI.toString());
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
         webTarget = client.target(resourceURl);
 
