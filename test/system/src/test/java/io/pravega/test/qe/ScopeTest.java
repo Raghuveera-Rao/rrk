@@ -11,14 +11,7 @@ package io.pravega.test.qe;
 
 import io.pravega.controller.server.rest.generated.api.JacksonJsonProvider;
 import io.pravega.controller.server.rest.generated.model.CreateScopeRequest;
-import io.pravega.controller.server.rest.generated.model.CreateStreamRequest;
-import io.pravega.controller.server.rest.generated.model.RetentionConfig;
-import io.pravega.controller.server.rest.generated.model.ScalingConfig;
 import io.pravega.controller.server.rest.generated.model.ScopeProperty;
-import io.pravega.controller.server.rest.generated.model.StreamProperty;
-import io.pravega.controller.server.rest.generated.model.StreamState;
-import io.pravega.controller.server.rest.generated.model.StreamsList;
-import io.pravega.controller.server.rest.generated.model.UpdateStreamRequest;
 import io.pravega.test.system.framework.Environment;
 import io.pravega.test.system.framework.SystemTestRunner;
 import io.pravega.test.system.framework.Utils;
@@ -127,7 +120,6 @@ public class ScopeTest extends AbstractSystemTest {
         String scopeName = RandomStringUtils.randomAlphanumeric(5)+"12";
 
         // TEST CreateScope
-        System.out.println("---- restServerURI ----"+restServerURI.toString());
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
         webTarget = client.target(resourceURl);
 
@@ -158,4 +150,138 @@ public class ScopeTest extends AbstractSystemTest {
         Assert.assertEquals("Create scope response", scopeName, response.readEntity(ScopeProperty.class).getScopeName());
         log.info("Create scope: {} successful ", scopeName);
     }
+
+    // Test create scope containing capital case letters
+    @Test
+    public void capitalCaseScope(){
+        CreateScopeRequest createScopeRequest = new CreateScopeRequest();
+        String scopeName = RandomStringUtils.random(6).toUpperCase();
+
+        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
+        webTarget = client.target(resourceURl);
+
+        createScopeRequest.setScopeName(scopeName);
+        Invocation.Builder builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
+        Response response = builder.post(Entity.json(createScopeRequest));
+
+        assertEquals("Create scope status", CREATED.getStatusCode(), response.getStatus());
+        Assert.assertEquals("Create scope response", scopeName, response.readEntity(ScopeProperty.class).getScopeName());
+        log.info("Create scope: {} successful ", scopeName);
+    }
+
+    // Test create scope containing small case letters
+    @Test
+    public void smallCaseScope(){
+        CreateScopeRequest createScopeRequest = new CreateScopeRequest();
+        String scopeName = RandomStringUtils.random(5).toLowerCase();
+
+        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
+        webTarget = client.target(resourceURl);
+
+        createScopeRequest.setScopeName(scopeName);
+        Invocation.Builder builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
+        Response response = builder.post(Entity.json(createScopeRequest));
+
+        assertEquals("Create scope status", CREATED.getStatusCode(), response.getStatus());
+        Assert.assertEquals("Create scope response", scopeName, response.readEntity(ScopeProperty.class).getScopeName());
+        log.info("Create scope: {} successful ", scopeName);
+    }
+
+    // Test create scope containing special characters
+    @Test
+    public void specialCharScope(){
+        CreateScopeRequest createScopeRequest = new CreateScopeRequest();
+        String scopeName = "i_am_underScore";
+
+        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
+        webTarget = client.target(resourceURl);
+
+        createScopeRequest.setScopeName(scopeName);
+        Invocation.Builder builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
+        Response response = builder.post(Entity.json(createScopeRequest));
+
+        assertEquals("Create scope status", INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        log.info("Create scope: {} having special character not possible, which is expected one", scopeName);
+    }
+
+    // Test create scope with an already existing scope name
+    @Test
+    public void duplicateScope(){
+        CreateScopeRequest createScopeRequest = new CreateScopeRequest();
+        String scopeName = RandomStringUtils.random(6).toLowerCase();
+
+        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
+        webTarget = client.target(resourceURl);
+
+        createScopeRequest.setScopeName(scopeName);
+        Invocation.Builder builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
+        Response response = builder.post(Entity.json(createScopeRequest));
+
+        assertEquals("Create scope status", CREATED.getStatusCode(), response.getStatus());
+        Assert.assertEquals("Create scope response", scopeName, response.readEntity(ScopeProperty.class).getScopeName());
+
+        createScopeRequest.setScopeName(scopeName);
+        builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
+        response = builder.post(Entity.json(createScopeRequest));
+
+        assertEquals("Create scope status", CONFLICT.getStatusCode(), response.getStatus());
+        log.info("Not able to create duplicate scope, which is expected one");
+    }
+
+    // Test delete scope with active stream
+    @Test
+    public void deleteScopeWithActiveStream(){
+        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + "_system").toString();
+        Response response = client.target(resourceURl).request().delete();
+        assertEquals("Delete scope status", PRECONDITION_FAILED.getStatusCode(), response.getStatus());
+        log.info("Delete scope with active stream not possible, which is expected");
+    }
+
+    // Test create multiple scopes
+    @Test
+    public void createMultipleScopes(){
+        String scopeName = RandomStringUtils.random(6);
+        createScopes(scopeName);
+        for(int i=1; i<=3; i++){
+            String sName = scopeName+i;
+            resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + sName).toString();
+            Response response = client.target(resourceURl).request().get();
+            assertEquals("Get scope status for "+sName+" ", OK.getStatusCode(), response.getStatus());
+            assertEquals("Get scope response for "+sName+" ", sName, response.readEntity(ScopeProperty.class).getScopeName());
+        }
+
+        log.info("Create multiple scopes successful");
+    }
+
+    // Test delete multiple scopes
+    @Test
+    public void deleteMultipleScopes(){
+        String scopeName = RandomStringUtils.random(6);
+        createScopes(scopeName);
+
+        for(int i=1; i<=3; i++){
+            String sName = scopeName+i;
+            resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + sName).toString();
+            Response response = client.target(resourceURl).request().delete();
+            assertEquals("Delete scope status for "+sName+" ", NO_CONTENT.getStatusCode(), response.getStatus());
+        }
+
+        log.info("Delete multiple scopes successful");
+    }
+
+    private void createScopes(String scopeName){
+        CreateScopeRequest createScopeRequest = new CreateScopeRequest();
+        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
+        webTarget = client.target(resourceURl);
+
+        for(int i=1; i<=3; i++){
+            String sName = scopeName+i;
+            createScopeRequest.setScopeName(sName);
+            Invocation.Builder builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
+            Response response = builder.post(Entity.json(createScopeRequest));
+            assertEquals("Create scope status for "+sName+" ", CREATED.getStatusCode(), response.getStatus());
+        }
+    }
+
+
 }
