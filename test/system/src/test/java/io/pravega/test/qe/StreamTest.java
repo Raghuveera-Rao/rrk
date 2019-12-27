@@ -51,7 +51,7 @@ public class StreamTest extends AbstractSystemTest {
     private static String restServerURI;
     private static Service conService;
     private static URI controllerRESTUri;
-    private final String scopeName = RandomStringUtils.randomAlphanumeric(6);
+    private static final String scopeName = "ScopeForStreamTests";
 
     public StreamTest() {
 
