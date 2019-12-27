@@ -155,7 +155,7 @@ public class ScopeTest extends AbstractSystemTest {
     @Test
     public void capitalCaseScope(){
         CreateScopeRequest createScopeRequest = new CreateScopeRequest();
-        String scopeName = RandomStringUtils.random(6).toUpperCase();
+        String scopeName = RandomStringUtils.randomAlphanumeric(6).toUpperCase();
 
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
         webTarget = client.target(resourceURl);
@@ -173,7 +173,7 @@ public class ScopeTest extends AbstractSystemTest {
     @Test
     public void smallCaseScope(){
         CreateScopeRequest createScopeRequest = new CreateScopeRequest();
-        String scopeName = RandomStringUtils.random(5).toLowerCase();
+        String scopeName = RandomStringUtils.randomAlphanumeric(5).toLowerCase();
 
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
         webTarget = client.target(resourceURl);
@@ -200,7 +200,7 @@ public class ScopeTest extends AbstractSystemTest {
         Invocation.Builder builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
         Response response = builder.post(Entity.json(createScopeRequest));
 
-        assertEquals("Create scope status", INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Create scope status", BAD_REQUEST.getStatusCode(), response.getStatus());
         log.info("Create scope: {} having special character not possible, which is expected one", scopeName);
     }
 
@@ -208,7 +208,7 @@ public class ScopeTest extends AbstractSystemTest {
     @Test
     public void duplicateScope(){
         CreateScopeRequest createScopeRequest = new CreateScopeRequest();
-        String scopeName = RandomStringUtils.random(6).toLowerCase();
+        String scopeName = RandomStringUtils.randomAlphanumeric(6).toLowerCase();
 
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
         webTarget = client.target(resourceURl);
@@ -240,7 +240,7 @@ public class ScopeTest extends AbstractSystemTest {
     // Test create multiple scopes
     @Test
     public void createMultipleScopes(){
-        String scopeName = RandomStringUtils.random(6);
+        String scopeName = RandomStringUtils.randomAlphanumeric(6);
         createScopes(scopeName);
         for(int i=1; i<=3; i++){
             String sName = scopeName+i;
@@ -256,7 +256,7 @@ public class ScopeTest extends AbstractSystemTest {
     // Test delete multiple scopes
     @Test
     public void deleteMultipleScopes(){
-        String scopeName = RandomStringUtils.random(6);
+        String scopeName = RandomStringUtils.randomAlphanumeric(6);
         createScopes(scopeName);
 
         for(int i=1; i<=3; i++){

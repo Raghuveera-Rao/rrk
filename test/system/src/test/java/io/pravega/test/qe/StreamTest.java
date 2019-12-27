@@ -108,7 +108,7 @@ public class StreamTest extends AbstractSystemTest {
     public void createBlankStream() {
         final String streamName = "";
         Response response = createStream(scopeName,streamName);
-        assertEquals("Create stream status", INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Create stream status", BAD_REQUEST.getStatusCode(), response.getStatus());
         log.info("Stream name with blank character is not possible, which is expected one");
     }
 
@@ -178,11 +178,15 @@ public class StreamTest extends AbstractSystemTest {
         response = createStream(scopeName,streamName2);
         assertEquals("Create stream status", CREATED.getStatusCode(), response.getStatus());
 
+        // Seal the stream before deleting
+        sealTheStream(scopeName,streamName1);
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams/" + streamName1).toString();
         response = client.target(resourceURl).request().delete();
         assertEquals("DeleteStream status", NO_CONTENT.getStatusCode(), response.getStatus());
         log.info("Delete stream: {} successful", streamName1);
 
+        // Seal the stream before deleting
+        sealTheStream(scopeName,streamName2);
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams/" + streamName2).toString();
         response = client.target(resourceURl).request().delete();
         assertEquals("DeleteStream status", NO_CONTENT.getStatusCode(), response.getStatus());
@@ -236,6 +240,18 @@ public class StreamTest extends AbstractSystemTest {
         return isScopePresent;
     }
 
+    private void sealTheStream(String scopeName, String streamName){
+        resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams/" + streamName + "/state")
+                .toString();
+        StreamState streamState = new StreamState();
+        streamState.setStreamState(StreamState.StreamStateEnum.SEALED);
+        Response response = client.target(resourceURl).request(MediaType.APPLICATION_JSON_TYPE)
+                .put(Entity.json(streamState));
+        assertEquals("UpdateStreamState status", OK.getStatusCode(), response.getStatus());
+        assertEquals("UpdateStreamState status in response", streamState.getStreamState(),
+                response.readEntity(StreamState.class).getStreamState());
+        log.info("Update stream state successful");
+    }
 
 
 }
