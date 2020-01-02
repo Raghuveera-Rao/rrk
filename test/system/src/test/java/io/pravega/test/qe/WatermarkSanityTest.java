@@ -40,6 +40,7 @@ import io.pravega.client.stream.impl.StreamCutImpl;
 import io.pravega.client.watermark.WatermarkSerializer;
 import io.pravega.common.Exceptions;
 import io.pravega.common.concurrent.Futures;
+import io.pravega.common.hash.RandomFactory;
 import io.pravega.controller.server.rest.generated.api.JacksonJsonProvider;
 import io.pravega.controller.server.rest.generated.model.StreamProperty;
 import io.pravega.controller.store.stream.StoreException;
@@ -89,8 +90,8 @@ import static org.junit.Assert.assertEquals;
 @RunWith(SystemTestRunner.class)
 public class WatermarkSanityTest extends AbstractSystemTest {
 
-    private static final String STREAM = "WMStream"+ RandomStringUtils.randomAlphanumeric(4);
-    private static final String SCOPE = "testWMSanityScope";
+    private static final String STREAM = "testWMSanityStream";
+    private static final String SCOPE = "testWMSanityScope" + RandomFactory.create().nextInt(Integer.MAX_VALUE);
 
     @Rule
     public Timeout globalTimeout = Timeout.seconds(10 * 60);
