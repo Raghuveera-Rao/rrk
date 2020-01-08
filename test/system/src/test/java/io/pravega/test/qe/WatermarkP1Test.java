@@ -41,8 +41,6 @@ import io.pravega.client.watermark.WatermarkSerializer;
 import io.pravega.common.Exceptions;
 import io.pravega.common.concurrent.Futures;
 import io.pravega.common.hash.RandomFactory;
-import io.pravega.controller.server.rest.generated.api.JacksonJsonProvider;
-import io.pravega.controller.server.rest.generated.model.StreamProperty;
 import io.pravega.controller.store.stream.StoreException;
 import io.pravega.shared.NameUtils;
 import io.pravega.shared.watermarks.Watermark;
@@ -78,19 +76,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.core.Response;
-import static javax.ws.rs.core.Response.Status.OK;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 @Slf4j
 @RunWith(SystemTestRunner.class)
-public class WatermarkSanityTest extends AbstractSystemTest {
-
-    private static final String STREAM = "testWMSanityStream";
-    private static final String SCOPE = "testWMSanityScope" + RandomFactory.create().nextInt(Integer.MAX_VALUE);
+public class WatermarkP1Test extends AbstractSystemTest {
 
     @Rule
     public Timeout globalTimeout = Timeout.seconds(10 * 60);
@@ -123,8 +114,6 @@ public class WatermarkSanityTest extends AbstractSystemTest {
 
         controllerURI = URI.create("tcp://" + String.join(",", uris));
         streamManager = StreamManager.create(Utils.buildClientConfig(controllerURI));
-        assertTrue("Creating Scope", streamManager.createScope(SCOPE));
-        assertTrue("Creating stream", streamManager.createStream(SCOPE, STREAM, config));
     }
 
     @After
@@ -132,51 +121,103 @@ public class WatermarkSanityTest extends AbstractSystemTest {
         streamManager.close();
     }
 
-    // Test to verify markup stream is generated when writer sends noteTime to controller
+    // Verify watermark for Event Writer Marks
     @Test
-    public void verifyMarkStream() {
-        final ClientConfig clientConfig = Utils.buildClientConfig(controllerURI);
-        @Cleanup
-        ConnectionFactory connectionFactory = new ConnectionFactoryImpl(clientConfig);
-        ControllerImpl controller = new ControllerImpl(ControllerImplConfig.builder().clientConfig(clientConfig).build(),
-                connectionFactory.getInternalExecutor());
+    public void eventWriterMarks() throws Exception {
+        String streamName = "testWMStream";
+        String scopeName = "eventWriterMarks" + RandomFactory.create().nextInt(Integer.MAX_VALUE);
 
-        // create one writer
-        @Cleanup
-        EventStreamClientFactory clientFactory = EventStreamClientFactory.withScope(SCOPE, clientConfig);
-        JavaSerializer<Long> javaSerializer = new JavaSerializer<>();
-        @Cleanup
-        EventStreamWriter<Long> writer1 = clientFactory.createEventWriter(STREAM, javaSerializer,
-                EventWriterConfig.builder().build());
-
-        AtomicBoolean stopFlag = new AtomicBoolean(false);
-        // write events
-        writeEvents(writer1, stopFlag);
-
-        List<URI> ctlURIs = controllerInstance.getServiceDetails();
-        URI controllerRESTUri = ctlURIs.get(1);
-        String restServerURI = "http://" + controllerRESTUri.getHost() + ":" + controllerRESTUri.getPort();
-        log.info("REST Server URI: {}", restServerURI);
-
-        org.glassfish.jersey.client.ClientConfig restClientConfig = new org.glassfish.jersey.client.ClientConfig();
-        restClientConfig.register(JacksonJsonProvider.class);
-        restClientConfig.property("sun.net.http.allowRestrictedHeaders", "true");
-        Client client = ClientBuilder.newClient(restClientConfig);
-
-        String marks_stream = NameUtils.getMarkStreamForStream(STREAM);
-        String resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + SCOPE + "/streams/" + marks_stream).toString();
-        Response response = client.target(resourceURl).request().get();
-        assertEquals("Get marks_stream status", OK.getStatusCode(), response.getStatus());
-        assertEquals("Get marks_stream response", marks_stream, response.readEntity(StreamProperty.class).getStreamName());
-        log.info("Get marks_stream {} successful", marks_stream);
+        assertTrue("Creating Scope", streamManager.createScope(scopeName));
+        assertTrue("Creating stream", streamManager.createStream(scopeName, streamName, config));
+        boolean [] validations = {true, true, true, true};
+        validateWatermark(scopeName, streamName, validations, false, -1);
     }
 
-    // Test multiple watermarks upon minimum controller instances
+    // Testing multiple watermarks to be emitted within the same scope
     @Test
-    public void writeWMWithOneControllerInstance() throws Exception {
-        // scale down one controller instance.
-        Futures.getAndHandleExceptions(controllerInstance.scaleService(1), ExecutionException::new);
+    public void wmInSameScope() throws Exception {
+        String streamName = "testWMStream1";
+        String scopeName = "wmInSameScope" + RandomFactory.create().nextInt(Integer.MAX_VALUE);
 
+        assertTrue("Creating Scope", streamManager.createScope(scopeName));
+        assertTrue("Creating stream", streamManager.createStream(scopeName, streamName, config));
+        boolean [] validations = {true, false, false, false};
+        validateWatermark(scopeName, streamName, validations, false, -1);
+
+        streamName = "testWMStream2";
+        assertTrue("Creating stream", streamManager.createStream(scopeName, streamName, config));
+        boolean [] validations2 = {true, true, false, true};
+        validateWatermark(scopeName, streamName, validations2, false, -1);
+    }
+
+    // Testing multiple watermarks to be emitted across multiple scopes
+    @Test
+    public void wmInMultipleScopes() throws Exception {
+        String streamName = "testWMStream";
+        String scopeName = "wmInMultipleScopes1" + RandomFactory.create().nextInt(Integer.MAX_VALUE);
+
+        assertTrue("Creating Scope", streamManager.createScope(scopeName));
+        assertTrue("Creating stream", streamManager.createStream(scopeName, streamName, config));
+        boolean [] validations = {true, false, false, false};
+        validateWatermark(scopeName, streamName, validations, false, -1);
+
+        scopeName = "wmInMultipleScopes2" + RandomFactory.create().nextInt(Integer.MAX_VALUE);
+        assertTrue("Creating Scope", streamManager.createScope(scopeName));
+        assertTrue("Creating stream", streamManager.createStream(scopeName, streamName, config));
+        boolean [] validations2 = {true, false, true, true};
+        validateWatermark(scopeName, streamName, validations2, false, -1);
+    }
+
+    // Verify watermark and markup stream when the controller is scaled up
+    @Test
+    public void scaleUpController() throws Exception {
+        String streamName = "testWMStream";
+        String scopeName = "scaleUpController" + RandomFactory.create().nextInt(Integer.MAX_VALUE);
+
+        assertTrue("Creating Scope", streamManager.createScope(scopeName));
+        assertTrue("Creating stream", streamManager.createStream(scopeName, streamName, config));
+        boolean [] validations = {true, true, true, true};
+        validateWatermark(scopeName, streamName, validations, true, 3);
+    }
+
+    // Verify watermark and markup stream when the controller is scaled down
+    @Test
+    public void scaleDownController() throws Exception {
+        String streamName = "testWMStream";
+        String scopeName = "scaleDownController" + RandomFactory.create().nextInt(Integer.MAX_VALUE);
+
+        assertTrue("Creating Scope", streamManager.createScope(scopeName));
+        assertTrue("Creating stream", streamManager.createStream(scopeName, streamName, config));
+        boolean [] validations = {true, true, true, true};
+        validateWatermark(scopeName, streamName, validations, true, 1);
+        Futures.getAndHandleExceptions(controllerInstance.scaleService(2), ExecutionException::new);
+    }
+
+    // Check whether watermark timeWindows are progressing with times
+    @Test
+    public void verifyWMIsProgressing() throws Exception {
+        String streamName = "testWMStream";
+        String scopeName = "WMIsProgressing" + RandomFactory.create().nextInt(Integer.MAX_VALUE);
+
+        assertTrue("Creating Scope", streamManager.createScope(scopeName));
+        assertTrue("Creating stream", streamManager.createStream(scopeName, streamName, config));
+        boolean [] validations = {true, true, true, false};
+        validateWatermark(scopeName, streamName, validations, false, -1);
+    }
+
+    // Validate whether each event have read time values ahead of watermark.LowerTimeBound value
+    @Test
+    public void verifyLowerTimeBound() throws Exception {
+        String streamName = "testWMStream";
+        String scopeName = "WMLowerTimeBound" + RandomFactory.create().nextInt(Integer.MAX_VALUE);
+
+        assertTrue("Creating Scope", streamManager.createScope(scopeName));
+        assertTrue("Creating stream", streamManager.createStream(scopeName, streamName, config));
+        boolean [] validations = {true, true, false, false};
+        validateWatermark(scopeName, streamName, validations, false, -1);
+    }
+
+    private void validateWatermark(String scope, String stream, boolean [] validations, boolean scaleController, int scaleCount) throws Exception {
         final ClientConfig clientConfig = Utils.buildClientConfig(controllerURI);
         @Cleanup
         ConnectionFactory connectionFactory = new ConnectionFactoryImpl(clientConfig);
@@ -185,79 +226,13 @@ public class WatermarkSanityTest extends AbstractSystemTest {
 
         // create 2 writers
         @Cleanup
-        EventStreamClientFactory clientFactory = EventStreamClientFactory.withScope(SCOPE, clientConfig);
+        EventStreamClientFactory clientFactory = EventStreamClientFactory.withScope(scope, clientConfig);
         JavaSerializer<Long> javaSerializer = new JavaSerializer<>();
         @Cleanup
-        EventStreamWriter<Long> writer1 = clientFactory.createEventWriter(STREAM, javaSerializer,
+        EventStreamWriter<Long> writer1 = clientFactory.createEventWriter(stream, javaSerializer,
                 EventWriterConfig.builder().build());
         @Cleanup
-        EventStreamWriter<Long> writer2 = clientFactory.createEventWriter(STREAM, javaSerializer,
-                EventWriterConfig.builder().build());
-
-        AtomicBoolean stopFlag = new AtomicBoolean(false);
-        // write events
-        writeEvents(writer1, stopFlag);
-        writeEvents(writer2, stopFlag);
-
-        // wait until mark stream is created
-        AtomicBoolean markStreamCreated = new AtomicBoolean(false);
-        Futures.loop(() -> !markStreamCreated.get(),
-                () -> Futures.exceptionallyExpecting(controller.getCurrentSegments(SCOPE, NameUtils.getMarkStreamForStream(STREAM)),
-                        e -> Exceptions.unwrap(e) instanceof StoreException.DataNotFoundException, null)
-                        .thenAccept(v -> markStreamCreated.set(v != null)), executorService);
-
-        @Cleanup
-        SynchronizerClientFactory syncClientFactory = SynchronizerClientFactory.withScope(SCOPE, clientConfig);
-        String markStream = NameUtils.getMarkStreamForStream(STREAM);
-
-        RevisionedStreamClient<Watermark> watermarkReader = syncClientFactory.createRevisionedStreamClient(markStream,
-                new WatermarkSerializer(),
-                SynchronizerConfig.builder().build());
-
-        LinkedBlockingQueue<Watermark> watermarks = new LinkedBlockingQueue<>();
-        fetchWatermarks(watermarkReader, watermarks, stopFlag);
-
-        AssertExtensions.assertEventuallyEquals(true, () -> watermarks.size() >= 2, 100000);
-        // wait until at least 2 more watermarks are emitted
-        AssertExtensions.assertEventuallyEquals(true, () -> watermarks.size() >= 4, 100000);
-
-        stopFlag.set(true);
-
-        Watermark watermark0 = watermarks.take();
-        Watermark watermark1 = watermarks.take();
-        Watermark watermark2 = watermarks.take();
-        Watermark watermark3 = watermarks.take();
-
-        assertTrue(watermark0.getLowerTimeBound() <= watermark0.getUpperTimeBound());
-        assertTrue(watermark1.getLowerTimeBound() <= watermark1.getUpperTimeBound());
-        assertTrue(watermark2.getLowerTimeBound() <= watermark2.getUpperTimeBound());
-        assertTrue(watermark3.getLowerTimeBound() <= watermark3.getUpperTimeBound());
-
-        // verify that watermarks are increasing in time.
-        assertTrue(watermark0.getLowerTimeBound() < watermark1.getLowerTimeBound());
-        assertTrue(watermark1.getLowerTimeBound() < watermark2.getLowerTimeBound());
-        assertTrue(watermark2.getLowerTimeBound() < watermark3.getLowerTimeBound());
-
-    }
-
-    //Test to verify the new TimeWindow is greater than the previous TimeWindow of watermark
-    @Test
-    public void verifyTimeWindow() throws Exception {
-        final ClientConfig clientConfig = Utils.buildClientConfig(controllerURI);
-        @Cleanup
-        ConnectionFactory connectionFactory = new ConnectionFactoryImpl(clientConfig);
-        ControllerImpl controller = new ControllerImpl(ControllerImplConfig.builder().clientConfig(clientConfig).build(),
-                connectionFactory.getInternalExecutor());
-
-        // create 2 writers
-        @Cleanup
-        EventStreamClientFactory clientFactory = EventStreamClientFactory.withScope(SCOPE, clientConfig);
-        JavaSerializer<Long> javaSerializer = new JavaSerializer<>();
-        @Cleanup
-        EventStreamWriter<Long> writer1 = clientFactory.createEventWriter(STREAM, javaSerializer,
-                EventWriterConfig.builder().build());
-        @Cleanup
-        EventStreamWriter<Long> writer2 = clientFactory.createEventWriter(STREAM, javaSerializer,
+        EventStreamWriter<Long> writer2 = clientFactory.createEventWriter(stream, javaSerializer,
                 EventWriterConfig.builder().build());
 
         AtomicBoolean stopFlag = new AtomicBoolean(false);
@@ -266,19 +241,19 @@ public class WatermarkSanityTest extends AbstractSystemTest {
         writeEvents(writer2, stopFlag);
 
         // scale the stream several times so that we get complex positions
-        Stream streamObj = Stream.of(SCOPE, STREAM);
+        Stream streamObj = Stream.of(scope, stream);
         scale(controller, streamObj);
 
         // wait until mark stream is created
         AtomicBoolean markStreamCreated = new AtomicBoolean(false);
         Futures.loop(() -> !markStreamCreated.get(),
-                () -> Futures.exceptionallyExpecting(controller.getCurrentSegments(SCOPE, NameUtils.getMarkStreamForStream(STREAM)),
+                () -> Futures.exceptionallyExpecting(controller.getCurrentSegments(scope, NameUtils.getMarkStreamForStream(stream)),
                         e -> Exceptions.unwrap(e) instanceof StoreException.DataNotFoundException, null)
                         .thenAccept(v -> markStreamCreated.set(v != null)), executorService);
 
         @Cleanup
-        SynchronizerClientFactory syncClientFactory = SynchronizerClientFactory.withScope(SCOPE, clientConfig);
-        String markStream = NameUtils.getMarkStreamForStream(STREAM);
+        SynchronizerClientFactory syncClientFactory = SynchronizerClientFactory.withScope(scope, clientConfig);
+        String markStream = NameUtils.getMarkStreamForStream(stream);
 
         RevisionedStreamClient<Watermark> watermarkReader = syncClientFactory.createRevisionedStreamClient(markStream,
                 new WatermarkSerializer(),
@@ -288,6 +263,11 @@ public class WatermarkSanityTest extends AbstractSystemTest {
         fetchWatermarks(watermarkReader, watermarks, stopFlag);
 
         AssertExtensions.assertEventuallyEquals(true, () -> watermarks.size() >= 2, 100000);
+
+        // scale up/down controller instance.
+        if(scaleController){
+            Futures.getAndHandleExceptions(controllerInstance.scaleService(scaleCount), ExecutionException::new);
+        }
 
         // wait until at least 2 more watermarks are emitted
         AssertExtensions.assertEventuallyEquals(true, () -> watermarks.size() >= 4, 100000);
@@ -299,21 +279,34 @@ public class WatermarkSanityTest extends AbstractSystemTest {
         Watermark watermark2 = watermarks.take();
         Watermark watermark3 = watermarks.take();
 
-        // verify that new TimeWindow is greater than the previous TimeWindow of watermark.
-        assertTrue(watermark0.getLowerTimeBound() < watermark1.getLowerTimeBound());
-        assertTrue(watermark1.getLowerTimeBound() < watermark2.getLowerTimeBound());
-        assertTrue(watermark2.getLowerTimeBound() < watermark3.getLowerTimeBound());
+        if(validations[0]){
+            assertTrue(watermark0.getLowerTimeBound() <= watermark0.getUpperTimeBound());
+            assertTrue(watermark1.getLowerTimeBound() <= watermark1.getUpperTimeBound());
+            assertTrue(watermark2.getLowerTimeBound() <= watermark2.getUpperTimeBound());
+            assertTrue(watermark3.getLowerTimeBound() <= watermark3.getUpperTimeBound());
+        }
 
-        assertTrue(watermark0.getUpperTimeBound() < watermark1.getUpperTimeBound());
-        assertTrue(watermark1.getUpperTimeBound() < watermark2.getUpperTimeBound());
-        assertTrue(watermark2.getUpperTimeBound() < watermark3.getUpperTimeBound());
+        if(validations[1]){
+            assertTrue(watermark0.getLowerTimeBound() < watermark1.getLowerTimeBound());
+            assertTrue(watermark1.getLowerTimeBound() < watermark2.getLowerTimeBound());
+            assertTrue(watermark2.getLowerTimeBound() < watermark3.getLowerTimeBound());
+        }
 
+        if(validations[2]){
+            assertTrue(watermark0.getUpperTimeBound() < watermark1.getUpperTimeBound());
+            assertTrue(watermark1.getUpperTimeBound() < watermark2.getUpperTimeBound());
+            assertTrue(watermark2.getUpperTimeBound() < watermark3.getUpperTimeBound());
+        }
+
+        if(validations[3]==false){
+            return ;
+        }
 
         // use watermark as lower and upper bounds.
         Map<Segment, Long> positionMap0 = watermark0.getStreamCut()
                 .entrySet().stream()
                 .collect(Collectors.toMap(x ->
-                                new Segment(SCOPE, STREAM, x.getKey().getSegmentId()),
+                                new Segment(scope, stream, x.getKey().getSegmentId()),
                         Map.Entry::getValue));
 
         StreamCut streamCutStart = new StreamCutImpl(streamObj, positionMap0);
@@ -322,14 +315,14 @@ public class WatermarkSanityTest extends AbstractSystemTest {
         Map<Segment, Long> positionMap2 = watermark2.getStreamCut()
                 .entrySet().stream()
                 .collect(Collectors.toMap(x ->
-                                new Segment(SCOPE, STREAM, x.getKey().getSegmentId()),
+                                new Segment(scope, stream, x.getKey().getSegmentId()),
                         Map.Entry::getValue));
 
         StreamCut streamCutEnd = new StreamCutImpl(streamObj, positionMap2);
         Map<Stream, StreamCut> end = Collections.singletonMap(streamObj, streamCutEnd);
 
         @Cleanup
-        ReaderGroupManager readerGroupManager = new ReaderGroupManagerImpl(SCOPE, controller, syncClientFactory, connectionFactory);
+        ReaderGroupManager readerGroupManager = new ReaderGroupManagerImpl(scope, controller, syncClientFactory, connectionFactory);
         String readerGroup = "rg";
 
         readerGroupManager.createReaderGroup(readerGroup, ReaderGroupConfig.builder().stream(streamObj)
