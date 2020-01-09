@@ -178,6 +178,7 @@ public class WatermarkP1Test extends AbstractSystemTest {
         assertTrue("Creating stream", streamManager.createStream(scopeName, streamName, config));
         boolean [] validations = {true, true, true, true};
         validateWatermark(scopeName, streamName, validations, true, 3);
+        Futures.getAndHandleExceptions(controllerInstance.scaleService(2), ExecutionException::new);
     }
 
     // Verify watermark and markup stream when the controller is scaled down
