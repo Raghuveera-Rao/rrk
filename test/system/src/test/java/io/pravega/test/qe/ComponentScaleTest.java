@@ -25,7 +25,6 @@ import io.pravega.common.hash.RandomFactory;
 import io.pravega.test.system.framework.Environment;
 import io.pravega.test.system.framework.SystemTestRunner;
 import io.pravega.test.system.framework.Utils;
-import io.pravega.test.system.framework.services.Service;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -184,4 +183,278 @@ public class ComponentScaleTest extends AbstractComponentScaleTest {
         testState.checkForAnomalies();
         log.info("Test scaleUpBookieTest succeeded");
     }
+
+    @Test
+    public void scaleUpSegmentStoreTest() throws Exception {
+        createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
+        createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
+
+        Map<String, Integer> scaleMap = new HashMap<>();
+        scaleMap.put("segmentstore",5);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("segmentstore",10);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        stopWriters();
+        stopReaders();
+        validateResults();
+        cleanUp(scope, STREAM_NAME, readerGroupManager, readerGroupName); //cleanup if validation is successful.
+        testState.checkForAnomalies();
+        log.info("Test scaleUpSegmentStoreTest succeeded");
+    }
+
+    @Test
+    public void scaleUpZookeeperTest() throws Exception {
+        createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
+        createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
+
+        Map<String, Integer> scaleMap = new HashMap<>();
+        scaleMap.put("zookeeper",3);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("zookeeper",5);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("zookeeper",7);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        stopWriters();
+        stopReaders();
+        validateResults();
+        cleanUp(scope, STREAM_NAME, readerGroupManager, readerGroupName); //cleanup if validation is successful.
+        testState.checkForAnomalies();
+        log.info("Test scaleUpZookeeperTest succeeded");
+    }
+
+    @Test
+    public void scaleUpBookieContSSTest() throws Exception {
+        createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
+        createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
+
+        Map<String, Integer> scaleMap = new HashMap<>();
+        scaleMap.put("bookkeeper",5);
+        scaleMap.put("controller",4);
+        scaleMap.put("segmentstore",5);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("bookkeeper",10);
+        scaleMap.replace("controller",8);
+        scaleMap.replace("segmentstore",10);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        stopWriters();
+        stopReaders();
+        validateResults();
+        cleanUp(scope, STREAM_NAME, readerGroupManager, readerGroupName); //cleanup if validation is successful.
+        testState.checkForAnomalies();
+        log.info("Test scaleUpBookieContSSTest succeeded");
+    }
+
+    @Test
+    public void scaleUpAllServicesTest() throws Exception {
+        createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
+        createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
+
+        Map<String, Integer> scaleMap = new HashMap<>();
+        scaleMap.put("bookkeeper",5);
+        scaleMap.put("controller",4);
+        scaleMap.put("segmentstore",5);
+        scaleMap.put("zookeeper",3);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("bookkeeper",10);
+        scaleMap.replace("controller",6);
+        scaleMap.replace("segmentstore",10);
+        scaleMap.replace("zookeeper",5);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        stopWriters();
+        stopReaders();
+        validateResults();
+        cleanUp(scope, STREAM_NAME, readerGroupManager, readerGroupName); //cleanup if validation is successful.
+        testState.checkForAnomalies();
+        log.info("Test scaleUpAllServicesTest succeeded");
+    }
+
+    @Test
+    public void scaleDownControllerTest() throws Exception {
+        createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
+        createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
+
+        Map<String, Integer> scaleMap = new HashMap<>();
+        scaleMap.put("controller",10);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("controller",5);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("controller",2);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        stopWriters();
+        stopReaders();
+        validateResults();
+        cleanUp(scope, STREAM_NAME, readerGroupManager, readerGroupName); //cleanup if validation is successful.
+        testState.checkForAnomalies();
+        log.info("Test scaleDownControllerTest succeeded");
+    }
+
+    @Test
+    public void scaleDownBookieTest() throws Exception {
+        createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
+        createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
+
+        Map<String, Integer> scaleMap = new HashMap<>();
+        scaleMap.put("bookkeeper",10);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("bookkeeper",5);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("bookkeeper",4);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        stopWriters();
+        stopReaders();
+        validateResults();
+        cleanUp(scope, STREAM_NAME, readerGroupManager, readerGroupName); //cleanup if validation is successful.
+        testState.checkForAnomalies();
+        log.info("Test scaleDownBookieTest succeeded");
+    }
+
+    @Test
+    public void scaleDownSegmentStoreTest() throws Exception {
+        createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
+        createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
+
+        Map<String, Integer> scaleMap = new HashMap<>();
+        scaleMap.put("segmentstore",10);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("segmentstore",5);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("segmentstore",3);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        stopWriters();
+        stopReaders();
+        validateResults();
+        cleanUp(scope, STREAM_NAME, readerGroupManager, readerGroupName); //cleanup if validation is successful.
+        testState.checkForAnomalies();
+        log.info("Test scaleDownSegmentStoreTest succeeded");
+    }
+
+    @Test
+    public void scaleDownZookeeperTest() throws Exception {
+        createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
+        createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
+
+        Map<String, Integer> scaleMap = new HashMap<>();
+        scaleMap.put("zookeeper",7);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("zookeeper",5);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("zookeeper",3);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        stopWriters();
+        stopReaders();
+        validateResults();
+        cleanUp(scope, STREAM_NAME, readerGroupManager, readerGroupName); //cleanup if validation is successful.
+        testState.checkForAnomalies();
+        log.info("Test scaleDownZookeeperTest succeeded");
+    }
+
+    @Test
+    public void scaleDownBookieContSSTest() throws Exception {
+        createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
+        createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
+
+        Map<String, Integer> scaleMap = new HashMap<>();
+        scaleMap.put("bookkeeper",10);
+        scaleMap.put("controller",8);
+        scaleMap.put("segmentstore",10);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("bookkeeper",5);
+        scaleMap.replace("controller",4);
+        scaleMap.replace("segmentstore",5);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("bookkeeper",4);
+        scaleMap.replace("controller",2);
+        scaleMap.replace("segmentstore",3);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        stopWriters();
+        stopReaders();
+        validateResults();
+        cleanUp(scope, STREAM_NAME, readerGroupManager, readerGroupName); //cleanup if validation is successful.
+        testState.checkForAnomalies();
+        log.info("Test scaleDownBookieContSSTest succeeded");
+    }
+
+    @Test
+    public void scaleDownAllServicesTest() throws Exception {
+        createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
+        createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
+
+        Map<String, Integer> scaleMap = new HashMap<>();
+        scaleMap.put("bookkeeper",10);
+        scaleMap.put("controller",6);
+        scaleMap.put("segmentstore",10);
+        scaleMap.put("zookeeper",5);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("bookkeeper",5);
+        scaleMap.replace("controller",4);
+        scaleMap.replace("segmentstore",5);
+        scaleMap.replace("zookeeper",3);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        scaleMap.replace("bookkeeper",4);
+        scaleMap.replace("controller",2);
+        scaleMap.replace("segmentstore",3);
+        scaleMap.replace("zookeeper",1);
+        //run the scale test
+        scaleComponentTest(scaleMap);
+
+        stopWriters();
+        stopReaders();
+        validateResults();
+        cleanUp(scope, STREAM_NAME, readerGroupManager, readerGroupName); //cleanup if validation is successful.
+        testState.checkForAnomalies();
+        log.info("Test scaleDownAllServicesTest succeeded");
+    }
+
 }
