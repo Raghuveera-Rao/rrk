@@ -206,7 +206,7 @@ public class ComponentScaleTest extends AbstractComponentScaleTest {
         log.info("Test scaleUpSegmentStoreTest succeeded");
     }
 
-    @Test
+    //@Test
     public void scaleUpZookeeperTest() throws Exception {
         createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
         createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
@@ -258,7 +258,7 @@ public class ComponentScaleTest extends AbstractComponentScaleTest {
         log.info("Test scaleUpBookieContSSTest succeeded");
     }
 
-    @Test
+    //@Test
     public void scaleUpAllServicesTest() throws Exception {
         createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
         createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
@@ -364,7 +364,7 @@ public class ComponentScaleTest extends AbstractComponentScaleTest {
         log.info("Test scaleDownSegmentStoreTest succeeded");
     }
 
-    @Test
+    //@Test
     public void scaleDownZookeeperTest() throws Exception {
         createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
         createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
@@ -422,7 +422,7 @@ public class ComponentScaleTest extends AbstractComponentScaleTest {
         log.info("Test scaleDownBookieContSSTest succeeded");
     }
 
-    @Test
+    //@Test
     public void scaleDownAllServicesTest() throws Exception {
         createWriters(clientFactory, NUM_WRITERS, scope, STREAM_NAME);
         createReaders(clientFactory, readerGroupName, scope, readerGroupManager, STREAM_NAME, NUM_READERS);
