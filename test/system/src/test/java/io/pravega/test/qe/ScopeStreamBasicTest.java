@@ -94,7 +94,17 @@ public class ScopeStreamBasicTest extends AbstractSystemTest {
     }
 
     @Test
-    public void test1_createScope() {
+    public void scopeStreamBasicTests(){
+        test1_createScope();
+        test2_getDetailsOfScope();
+        test3_createStream();
+        test4_getDetailsOfStream();
+        test5_updateStreamState();
+        test6_deleteStream();
+        test7_deleteScope();
+    }
+
+    private void test1_createScope() {
         CreateScopeRequest createScopeRequest = new CreateScopeRequest();
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
         webTarget = client.target(resourceURl);
@@ -108,8 +118,7 @@ public class ScopeStreamBasicTest extends AbstractSystemTest {
         log.info("Create scope: {} successful ", scopeName);
     }
 
-    @Test
-    public void test2_getDetailsOfScope() {
+    private void test2_getDetailsOfScope() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName).toString();
         Response response = client.target(resourceURl).request().get();
         assertEquals("Get scope status", OK.getStatusCode(), response.getStatus());
@@ -117,8 +126,7 @@ public class ScopeStreamBasicTest extends AbstractSystemTest {
         log.info("Get scope successful");
     }
 
-    @Test
-    public void test3_createStream() {
+    private void test3_createStream() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams").toString();
         webTarget = client.target(resourceURl);
 
@@ -147,8 +155,7 @@ public class ScopeStreamBasicTest extends AbstractSystemTest {
         log.info("Create stream: {} successful", streamName);
     }
 
-    @Test
-    public void test4_getDetailsOfStream() {
+    private void test4_getDetailsOfStream() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams").toString();
         webTarget = client.target(resourceURl);
         Invocation.Builder builder = webTarget.request();
@@ -158,8 +165,7 @@ public class ScopeStreamBasicTest extends AbstractSystemTest {
         log.info("List streams successful");
     }
 
-    @Test
-    public void test5_updateStreamState() {
+    private void test5_updateStreamState() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams/" + streamName + "/state")
                 .toString();
         StreamState streamState = new StreamState();
@@ -172,8 +178,7 @@ public class ScopeStreamBasicTest extends AbstractSystemTest {
         log.info("Update stream state successful");
     }
 
-    @Test
-    public void test6_deleteStream() {
+    private void test6_deleteStream() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams/" + streamName)
                 .toString();
         Response response = client.target(resourceURl).request().delete();
@@ -181,8 +186,7 @@ public class ScopeStreamBasicTest extends AbstractSystemTest {
         log.info("Delete stream successful");
     }
 
-    @Test
-    public void test7_deleteScope() {
+    private void test7_deleteScope() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName).toString();
         Response response = client.target(resourceURl).request().delete();
         assertEquals("Get scope status", NO_CONTENT.getStatusCode(), response.getStatus());
