@@ -276,7 +276,7 @@ public class WatermarkTransactionCommit extends AbstractSystemTest {
                         currentTime.set(timer.incrementAndGet());
                         txn.writeEvent(count.toString(), currentTime.get());
                     }
-                    log.info("Note Time: ", currentTime.get());
+                    log.info("Note Time = {}", currentTime.get());
                     txn.commit(currentTime.get());
                 } catch (TxnFailedException e) {
                     throw new CompletionException(e);

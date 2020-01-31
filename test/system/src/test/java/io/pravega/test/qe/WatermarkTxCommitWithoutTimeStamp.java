@@ -144,6 +144,8 @@ public class WatermarkTxCommitWithoutTimeStamp extends AbstractSystemTest {
         fetchWatermarks(watermarkReader, watermarks, stopFlag);
 
         AssertExtensions.assertEventuallyEquals(true, () -> watermarks.size() == 0, 100000);
+        // wait until at least 2 more watermarks are emitted
+        AssertExtensions.assertEventuallyEquals(true, () -> watermarks.size() == 0, 100000);
     }
 
     private void fetchWatermarks(RevisionedStreamClient<Watermark> watermarkReader, LinkedBlockingQueue<Watermark> watermarks, AtomicBoolean stop) throws Exception {
@@ -174,7 +176,7 @@ public class WatermarkTxCommitWithoutTimeStamp extends AbstractSystemTest {
                         currentTime.set(timer.incrementAndGet());
                         txn.writeEvent(count.toString(), currentTime.get());
                     }
-                    log.info("Note Time: ", currentTime.get());
+                    log.info("Note Time = {}", currentTime.get());
                     txn.commit();
                 } catch (TxnFailedException e) {
                     throw new CompletionException(e);
