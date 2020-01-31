@@ -144,8 +144,7 @@ public class WatermarkTxCommitWithoutTimeStamp extends AbstractSystemTest {
         fetchWatermarks(watermarkReader, watermarks, stopFlag);
 
         AssertExtensions.assertEventuallyEquals(true, () -> watermarks.size() == 0, 100000);
-        // wait until at least 2 more watermarks are emitted
-        AssertExtensions.assertEventuallyEquals(true, () -> watermarks.size() == 0, 100000);
+        stopFlag.set(true);
     }
 
     private void fetchWatermarks(RevisionedStreamClient<Watermark> watermarkReader, LinkedBlockingQueue<Watermark> watermarks, AtomicBoolean stop) throws Exception {
