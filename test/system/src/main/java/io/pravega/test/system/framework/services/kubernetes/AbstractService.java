@@ -94,7 +94,7 @@ public abstract class AbstractService implements Service {
         return id;
     }
 
-    CompletableFuture<Object> deployPravegaUsingOperator(final URI zkUri, final URI bkUri, int controllerCount, int segmentStoreCount, ImmutableMap<String, String> props) {
+    CompletableFuture<Object> deployPravegaUsingOperator(final URI zkUri, int controllerCount, int segmentStoreCount, ImmutableMap<String, String> props) {
     return k8sClient.createCRD(getPravegaCRD())
                         .thenCompose(v -> k8sClient.createRole(NAMESPACE, getPravegaOperatorRole()))
                         .thenCompose(v -> k8sClient.createClusterRole(getPravegaOperatorClusterRole()))
@@ -107,13 +107,13 @@ public abstract class AbstractService implements Service {
                         // request operator to deploy zookeeper nodes.
                         .thenCompose(v -> k8sClient.createAndUpdateCustomObject(CUSTOM_RESOURCE_GROUP_PRAVEGA, CUSTOM_RESOURCE_VERSION_PRAVEGA,
                                                                                 NAMESPACE, CUSTOM_RESOURCE_PLURAL_PRAVEGA,
-                                                                                getPravegaDeployment(zkUri.getAuthority(),bkUri.getAuthority(),
+                                                                                getPravegaDeployment(zkUri.getAuthority(),
                                                                                                    controllerCount,
                                                                                                    segmentStoreCount,
                                                                                                     props)));
     }
 
-    private Map<String, Object> getPravegaDeployment(String zkLocation, String bkLocation, int controllerCount, int segmentStoreCount, ImmutableMap<String, String> props) {
+    private Map<String, Object> getPravegaDeployment(String zkLocation, int controllerCount, int segmentStoreCount, ImmutableMap<String, String> props) {
         // generate BookkeeperSpec.
         //final Map<String, Object> bkPersistentVolumeSpec = getPersistentVolumeClaimSpec("10Gi", "standard");
 
@@ -160,7 +160,7 @@ public abstract class AbstractService implements Service {
                 .put("kind", CUSTOM_RESOURCE_KIND_PRAVEGA)
                 .put("metadata", ImmutableMap.of("name", PRAVEGA_ID, "namespace", NAMESPACE))
                 //.put("spec", buildPravegaClusterSpec(zkLocation, bookkeeperSpec, pravegaSpec))
-                .put("spec", buildPravegaClusterSpec(zkLocation,bkLocation, pravegaSpec))
+                .put("spec", buildPravegaClusterSpec(zkLocation, pravegaSpec))
                 .build();
     }
 
@@ -185,11 +185,11 @@ public abstract class AbstractService implements Service {
         return true;
     }
 
-    protected Map<String, Object> buildPravegaClusterSpec(String zkLocation, String bkLocation, Map<String, Object> pravegaSpec) {
+    protected Map<String, Object> buildPravegaClusterSpec(String zkLocation, Map<String, Object> pravegaSpec) {
 
         ImmutableMap<String, Object> commonEntries = ImmutableMap.<String, Object>builder()
                 .put("zookeeperUri", zkLocation)
-                .put("bookkeeperUri", bkLocation)
+                .put("bookkeeperUri", BOOKKEEPER_ID+"-"+BOOKKEEPER_LABEL+"-headless"+":"+BOOKKEEPER_PORT)
                 //.put("bookkeeper", bookkeeperSpec)
                 .put("pravega", pravegaSpec)
                 .build();

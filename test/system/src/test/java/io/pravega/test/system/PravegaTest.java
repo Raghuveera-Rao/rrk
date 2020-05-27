@@ -67,10 +67,11 @@ public class PravegaTest extends AbstractReadWriteTest {
     @Environment
     public static void initialize() {
         URI zkUri = startZookeeperInstance();
-        URI bkUri = startBookkeeperInstances(zkUri);
+        startBookkeeperInstances(zkUri);
         //Ranjan
         //URI bkUris = getBookkeeperInstance(zkUri);
-        startpravegaInstances(zkUri, bkUri);
+        //String bkUri="tcp://"
+        startpravegaInstances(zkUri);
         URI controllerUri = ensureControllerRunning(zkUri);
         ensureSegmentStoreRunning(zkUri, controllerUri);
     }

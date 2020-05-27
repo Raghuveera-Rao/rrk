@@ -26,20 +26,20 @@ import static io.pravega.test.system.framework.TestFrameworkException.Type.Reque
 public class PravegaK8sService extends AbstractService {
 
     private final URI zkUri;
-    private final URI bkUri;
+    //private final URI bkUri;
     private final ImmutableMap<String, String> properties;
 
-    public PravegaK8sService(final String id, final URI zkUri, final URI bkUri, final ImmutableMap<String, String> properties) {
+    public PravegaK8sService(final String id, final URI zkUri, final ImmutableMap<String, String> properties) {
         super(id);
         this.zkUri = zkUri;
-        this.bkUri = bkUri;
+        //this.bkUri = bkUri;
         this.properties = properties;
     }
 
     @Override
     public void start(boolean wait) {
 
-        Futures.getAndHandleExceptions(deployPravegaUsingOperator(zkUri, bkUri, DEFAULT_CONTROLLER_COUNT, DEFAULT_SEGMENTSTORE_COUNT, properties),
+        Futures.getAndHandleExceptions(deployPravegaUsingOperator(zkUri, DEFAULT_CONTROLLER_COUNT, DEFAULT_SEGMENTSTORE_COUNT, properties),
                 t -> new TestFrameworkException(RequestFailed, "Failed to deploy pravega operator/pravega services", t));
         if (wait) {
             Futures.getAndHandleExceptions(k8sClient.waitUntilPodIsRunning(NAMESPACE, "component", BOOKKEEPER_LABEL, DEFAULT_BOOKIE_COUNT),

@@ -88,7 +88,7 @@ public class Utils {
                 return new BookkeeperK8sService(serviceId, zkUri, getPravegaProperties());
         }
     }
-    public static Service createPravegaService(final URI zkUri, final URI bkUri) {
+    public static Service createPravegaService(final URI zkUri) {
         String serviceId = "pravega";
         switch (EXECUTOR_TYPE) {
             case REMOTE_SEQUENTIAL:
@@ -97,7 +97,7 @@ public class Utils {
                 return new BookkeeperDockerService(serviceId, zkUri);
             case KUBERNETES:
             default:
-                return new PravegaK8sService(serviceId, zkUri, bkUri,getPravegaProperties());
+                return new PravegaK8sService(serviceId, zkUri,getPravegaProperties());
         }
     }
     public static Service createPravegaControllerService(final URI zkUri, String serviceName) {
