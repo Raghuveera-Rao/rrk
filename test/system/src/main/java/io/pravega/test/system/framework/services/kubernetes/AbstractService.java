@@ -11,46 +11,21 @@ package io.pravega.test.system.framework.services.kubernetes;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
-import io.kubernetes.client.models.V1Container;
-import io.kubernetes.client.models.V1ContainerBuilder;
-import io.kubernetes.client.models.V1ContainerPortBuilder;
-import io.kubernetes.client.models.V1Deployment;
-import io.kubernetes.client.models.V1DeploymentBuilder;
-import io.kubernetes.client.models.V1DeploymentSpecBuilder;
-import io.kubernetes.client.models.V1EnvVarBuilder;
-import io.kubernetes.client.models.V1EnvVarSourceBuilder;
-import io.kubernetes.client.models.V1LabelSelectorBuilder;
-import io.kubernetes.client.models.V1ObjectFieldSelectorBuilder;
-import io.kubernetes.client.models.V1ObjectMetaBuilder;
-import io.kubernetes.client.models.V1PodSpecBuilder;
-import io.kubernetes.client.models.V1PodTemplateSpecBuilder;
-import io.kubernetes.client.models.V1beta1CustomResourceDefinition;
-import io.kubernetes.client.models.V1beta1CustomResourceDefinitionBuilder;
-import io.kubernetes.client.models.V1beta1CustomResourceDefinitionNamesBuilder;
-import io.kubernetes.client.models.V1beta1CustomResourceDefinitionSpecBuilder;
-import io.kubernetes.client.models.V1beta1CustomResourceDefinitionStatus;
-import io.kubernetes.client.models.V1beta1PolicyRuleBuilder;
-import io.kubernetes.client.models.V1beta1Role;
-import io.kubernetes.client.models.V1beta1ClusterRole;
-import io.kubernetes.client.models.V1beta1RoleBinding;
-import io.kubernetes.client.models.V1beta1ClusterRoleBinding;
-import io.kubernetes.client.models.V1beta1RoleBindingBuilder;
-import io.kubernetes.client.models.V1beta1ClusterRoleBindingBuilder;
-import io.kubernetes.client.models.V1beta1RoleBuilder;
-import io.kubernetes.client.models.V1beta1ClusterRoleBuilder;
-import io.kubernetes.client.models.V1beta1RoleRefBuilder;
-import io.kubernetes.client.models.V1beta1SubjectBuilder;
+import io.kubernetes.client.models.*;
+import io.kubernetes.client.proto.V1;
 import io.pravega.test.system.framework.kubernetes.ClientFactory;
 import io.pravega.test.system.framework.kubernetes.K8sClient;
 import io.pravega.test.system.framework.services.Service;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 import static io.pravega.common.Exceptions.checkNotNullOrEmpty;
+import static java.util.Collections.newSetFromMap;
 import static java.util.Collections.singletonList;
 
 @Slf4j
@@ -80,6 +55,7 @@ public abstract class AbstractService implements Service {
     static final String PRAVEGA_CONTROLLER_LABEL = "pravega-controller";
     static final String PRAVEGA_SEGMENTSTORE_LABEL = "pravega-segmentstore";
     static final String BOOKKEEPER_LABEL = "bookie";
+    static final String BOOKKEEPER_ID = "pravega-bk";
     static final String PRAVEGA_ID = "pravega";
     static final String ZOOKEEPER_OPERATOR_IMAGE = System.getProperty("zookeeperOperatorImage", "pravega/zookeeper-operator:latest");
     static final String IMAGE_PULL_POLICY = System.getProperty("imagePullPolicy", "Always");
@@ -87,11 +63,24 @@ public abstract class AbstractService implements Service {
     private static final String PRAVEGA_BOOKKEEPER_VERSION = System.getProperty("pravegaBookkeeperVersion", PRAVEGA_VERSION);
     private static final String PRAVEGA_OPERATOR_IMAGE = System.getProperty("pravegaOperatorImage", "pravega/pravega-operator:latest");
     private static final String PRAVEGA_IMAGE_NAME = System.getProperty("pravegaImageName", "pravega");
-    private static final String BOOKKEEPER_IMAGE_NAME = System.getProperty("bookkeeperImageName", "bookkeeper");
+    //private static final String BOOKKEEPER_IMAGE_NAME = System.getProperty("bookkeeperImageName", "bookkeeper");
     private static final String TIER2_NFS = "nfs";
     private static final String TIER2_TYPE = System.getProperty("tier2Type", TIER2_NFS);
     private static final boolean IS_OPERATOR_VERSION_ABOVE_040 = isOperatorVersionAbove040();
 
+    static final String BOOKKEEPER_OPERATOR = "bookkeeper-operator";
+    private static final String BOOKKEEPER_OPERATOR_IMAGE = System.getProperty("bookkeeperOperatorImage", "pravega/bookkeeper-operator:latest");
+    static final String CUSTOM_RESOURCE_GROUP_BOOKKEEPER = "bookkeeper.pravega.io";
+    static final String CUSTOM_RESOURCE_VERSION_BOOKKEEPER = "v1alpha1";
+    static final String CUSTOM_RESOURCE_API_VERSION_BOOKKEEPER = CUSTOM_RESOURCE_GROUP_BOOKKEEPER + "/" + CUSTOM_RESOURCE_VERSION_BOOKKEEPER;
+    static final String CUSTOM_RESOURCE_PLURAL_BOOKKEEPER = "bookkeeperclusters";
+    static final String CUSTOM_RESOURCE_KIND_BOOKKEEPER = "BookkeeperCluster";
+    static final String CONFIG_MAP_BOOKKEEPER = "bk-config-map";
+    private static final String BOOKKEEPER_VERSION = System.getProperty("bookkeeperImageVersion", "0.7.0");
+    private static final String BOOKKEEPER_IMAGE_NAME = System.getProperty("bookkeeperImageName", "bookkeeper");
+    private static final String ZK_SERVICE_NAME = "zookeeper-client:2181";
+    private static final String JOURNALDIRECTORIES = "bk/journal/j0,/bk/journal/j1,/bk/journal/j2,/bk/journal/j3";
+    private static final String LEDGERDIRECTORIES = "/bk/ledgers/l0,/bk/ledgers/l1,/bk/ledgers/l2,/bk/ledgers/l3";
     final K8sClient k8sClient;
     private final String id;
 
@@ -126,25 +115,25 @@ public abstract class AbstractService implements Service {
 
     private Map<String, Object> getPravegaDeployment(String zkLocation, int controllerCount, int segmentStoreCount, int bookieCount, ImmutableMap<String, String> props) {
         // generate BookkeeperSpec.
-        final Map<String, Object> bkPersistentVolumeSpec = getPersistentVolumeClaimSpec("10Gi", "standard");
+        //final Map<String, Object> bkPersistentVolumeSpec = getPersistentVolumeClaimSpec("10Gi", "standard");
 
         // generate Pravega Spec.
         final Map<String, Object> pravegaPersistentVolumeSpec = getPersistentVolumeClaimSpec("20Gi", "standard");
         
-        final String bookkeeperImg = DOCKER_REGISTRY + PREFIX + "/" + BOOKKEEPER_IMAGE_NAME;
+        //final String bookkeeperImg = DOCKER_REGISTRY + PREFIX + "/" + BOOKKEEPER_IMAGE_NAME;
         final String pravegaImg = DOCKER_REGISTRY + PREFIX + "/" + PRAVEGA_IMAGE_NAME;
-        final Map<String, Object> bookkeeperImgSpec;
+        //final Map<String, Object> bookkeeperImgSpec;
         final Map<String, Object> pravegaImgSpec;
 
         if (IS_OPERATOR_VERSION_ABOVE_040) {
-            bookkeeperImgSpec = ImmutableMap.of("repository", bookkeeperImg);
+            //bookkeeperImgSpec = ImmutableMap.of("repository", bookkeeperImg);
             pravegaImgSpec = ImmutableMap.of("repository", pravegaImg);
         } else {
-            bookkeeperImgSpec = getImageSpec(bookkeeperImg, PRAVEGA_BOOKKEEPER_VERSION);
+           // bookkeeperImgSpec = getImageSpec(bookkeeperImg, PRAVEGA_BOOKKEEPER_VERSION);
             pravegaImgSpec = getImageSpec(pravegaImg, PRAVEGA_VERSION);
         }
         
-        final Map<String, Object> bookkeeperSpec = ImmutableMap.<String, Object>builder().put("image", bookkeeperImgSpec)
+        /*final Map<String, Object> bookkeeperSpec = ImmutableMap.<String, Object>builder().put("image", bookkeeperImgSpec)
                 .put("replicas", bookieCount)
                 .put("resources", getResources("2000m", "5Gi", "1000m", "3Gi"))
                 .put("storage", ImmutableMap.builder()
@@ -153,7 +142,7 @@ public abstract class AbstractService implements Service {
                         .put("journalVolumeClaimTemplate", bkPersistentVolumeSpec)
                         .build())
                 .put("autoRecovery", true)
-                .build();
+                .build();*/
 
         final Map<String, Object> pravegaSpec = ImmutableMap.<String, Object>builder().put("controllerReplicas", controllerCount)
                 .put("segmentStoreReplicas", segmentStoreCount)
@@ -162,7 +151,7 @@ public abstract class AbstractService implements Service {
                 .put("controllerResources", getResources("2000m", "3Gi", "1000m", "1Gi"))
                 .put("segmentStoreResources", getResources("2000m", "5Gi", "1000m", "3Gi"))
                 .put("options", props)
-                .put("image", pravegaImgSpec)
+               .put("image", pravegaImgSpec)
                 .put("tier2", tier2Spec())
                 .build();
 
@@ -170,7 +159,7 @@ public abstract class AbstractService implements Service {
                 .put("apiVersion", CUSTOM_RESOURCE_API_VERSION)
                 .put("kind", CUSTOM_RESOURCE_KIND_PRAVEGA)
                 .put("metadata", ImmutableMap.of("name", PRAVEGA_ID, "namespace", NAMESPACE))
-                .put("spec", buildPravegaClusterSpec(zkLocation, bookkeeperSpec, pravegaSpec))
+                //.put("spec", buildPravegaClusterSpec(zkLocation, bookkeeperSpec, pravegaSpec))
                 .build();
     }
 
@@ -275,7 +264,7 @@ public abstract class AbstractService implements Service {
 
     protected Map<String, Object> getImageSpec(String imageName, String tag) {
         return ImmutableMap.<String, Object>builder().put("repository", imageName)
-                .put("tag", tag)
+                //.put("tag", tag)
                 .put("pullPolicy", IMAGE_PULL_POLICY)
                 .build();
     }
@@ -427,6 +416,358 @@ public abstract class AbstractService implements Service {
                                                                                .build())
                                         .build();
     }
+
+///////////////Richa
+
+    CompletableFuture<Object> deployBookkeeperUsingOperator(final URI zkUri, int bookieCount, ImmutableMap<String, String> props) {
+        return k8sClient.createCRD(getBookkeeperCRD())
+                .thenCompose(v -> k8sClient.createRole(NAMESPACE, getBookkeeperOperatorRole()))
+                .thenCompose(v -> k8sClient.createClusterRole(getBookkeeperOperatorClusterRole()))
+                .thenCompose(v -> k8sClient.createRoleBinding(NAMESPACE, getBookkeeperOperatorRoleBinding()))
+                .thenCompose(v -> k8sClient.createClusterRoleBinding(getBookkeeperOperatorClusterRoleBinding()))
+                .thenCompose(v -> k8sClient.createServiceAccount(NAMESPACE, getBookkeeperServiceAccount()))
+                .thenCompose(v -> k8sClient.createConfigMap(NAMESPACE, getBookkeeperOperatorConfigMap()))
+                //deploy bookkeeper operator.
+                .thenCompose(v -> k8sClient.createDeployment(NAMESPACE, getBookkeeperOperatorDeployment()))
+                // wait until bookkeeper operator is running, only one instance of operator is running.
+                .thenCompose(v -> k8sClient.waitUntilPodIsRunning(NAMESPACE, "name", BOOKKEEPER_OPERATOR, 1))
+                //.thenCompose(v -> k8sClient.createConfigMap(NAMESPACE, getBookkeeperOperatorVersionMap()))
+                //.thenCompose(v -> k8sClient.createConfigMap(NAMESPACE, getBookkeeperOperatorConfigMap()))
+                // request operator to deploy bookkeeper nodes.
+                .thenCompose(v -> k8sClient.createAndUpdateCustomObject(CUSTOM_RESOURCE_GROUP_BOOKKEEPER, CUSTOM_RESOURCE_VERSION_BOOKKEEPER,
+                        NAMESPACE, CUSTOM_RESOURCE_PLURAL_BOOKKEEPER,
+                        getBookkeeperDeployment(zkUri.getAuthority(),
+                                bookieCount,
+                                props)));
+    }
+
+
+    private Map<String, Object> getBookkeeperDeployment(String zkLocation, int bookieCount, ImmutableMap<String, String> props) {
+        // generate BookkeeperSpec.
+        final Map<String, Object> bkPersistentVolumeSpec = getPersistentVolumeClaimSpec("10Gi", "standard");
+
+        //final String bookkeeperImg = DOCKER_REGISTRY + PREFIX + "/" + BOOKKEEPER_IMAGE_NAME;
+        //final Map<String, Object> bookkeeperImgSpec;
+        //bookkeeperImgSpec = getImageSpec(bookkeeperImg, BOOKKEEPER_VERSION);
+        final Map<String, Object> bookkeeperSpec = ImmutableMap.<String, Object>builder().put("image", getImageSpec(DOCKER_REGISTRY + PREFIX + "/" + BOOKKEEPER_IMAGE_NAME, BOOKKEEPER_VERSION))
+                .put("replicas", bookieCount)
+                .put("version", BOOKKEEPER_VERSION)
+                .put("resources", getResources("2000m", "5Gi", "1000m", "3Gi"))
+                .put("storage", ImmutableMap.builder()
+                        .put("indexVolumeClaimTemplate", bkPersistentVolumeSpec)
+                        .put("ledgerVolumeClaimTemplate", bkPersistentVolumeSpec)
+                        .put("journalVolumeClaimTemplate", bkPersistentVolumeSpec)
+                        .build())
+                .put("envVars", CONFIG_MAP_BOOKKEEPER)
+                .put("zookeeperUri", zkLocation)
+                .put("autoRecovery", true)
+                .put("options", ImmutableMap.builder()  .put("journalDirectories", JOURNALDIRECTORIES)
+                        .put("ledgerDirectories", LEDGERDIRECTORIES)
+                        //.put("journalVolumeClaimTemplate", bkPersistentVolumeSpec)
+                        .build())
+                .build();
+
+        log.info("zk authority: {}", zkLocation);
+        log.info("bookkeeperSpec: ");
+        bookkeeperSpec.forEach((k, v) -> System.out.println((k + ":" + v)));
+
+        return ImmutableMap.<String, Object>builder()
+                .put("apiVersion", CUSTOM_RESOURCE_API_VERSION_BOOKKEEPER)
+                .put("kind", CUSTOM_RESOURCE_KIND_BOOKKEEPER)
+                .put("metadata", ImmutableMap.of("name", BOOKKEEPER_ID, "namespace", NAMESPACE))
+                .put("spec", bookkeeperSpec)
+                .build();
+    }
+
+    protected Map<String, Object> buildBookkeeperClusterSpec(String zkLocation, Map<String, Object> bookkeeperSpec) {
+
+        ImmutableMap<String, Object> commonEntries = ImmutableMap.<String, Object>builder()
+                .put("zookeeperUri", zkLocation)
+                .put("bookkeeper", bookkeeperSpec)
+                .build();
+
+        return commonEntries;
+
+    }
+
+
+    private V1beta1CustomResourceDefinition getBookkeeperCRD() {
+
+        return new V1beta1CustomResourceDefinitionBuilder()
+                .withApiVersion("apiextensions.k8s.io/v1beta1")
+                .withKind("CustomResourceDefinition")
+                .withMetadata(new V1ObjectMetaBuilder().withName("bookkeeperclusters.bookkeeper.pravega.io").build())
+                .withSpec(new V1beta1CustomResourceDefinitionSpecBuilder()
+                        .withGroup(CUSTOM_RESOURCE_GROUP_BOOKKEEPER)
+                        .withNames(new V1beta1CustomResourceDefinitionNamesBuilder()
+                                .withKind(CUSTOM_RESOURCE_KIND_BOOKKEEPER)
+                                .withListKind("BookkeeperClusterList")
+                                .withPlural(CUSTOM_RESOURCE_PLURAL_BOOKKEEPER)
+                                .withSingular("bookkeepercluster")
+                                .build())
+                        .withScope("Namespaced")
+                        .withVersion(CUSTOM_RESOURCE_VERSION_BOOKKEEPER)
+                        .withNewSubresources()
+                        .withStatus(new V1beta1CustomResourceDefinitionStatus())
+                        .endSubresources()
+                        .build())
+                .build();
+    }
+/*    private V1Role getBookkeeperOperatorRole(){
+        return new V1RoleBuilder()
+                .withKind("Role")
+                .withApiVersion("rbac.authorization.k8s.io/v1")   //v1beta1 instead of v1
+                .withMetadata(new V1ObjectMetaBuilder().withName(BOOKKEEPER_OPERATOR).build())
+                .withRules()
+                .withRules(new V1PolicyRuleBuilder().withApiGroups(CUSTOM_RESOURCE_GROUP_BOOKKEEPER)
+                                .withResources("*")
+                                .withVerbs("*")
+                                .build(),
+                        new V1PolicyRuleBuilder().withApiGroups("")
+                                .withResources("pods", "services", "endpoints", "persistentvolumeclaims", "events", "configmaps", "secrets")
+                                .withVerbs("*")
+                                .build(),
+                        new V1PolicyRuleBuilder().withApiGroups("apps")
+                                .withResources("deployments", "daemonsets", "replicasets", "statefulsets")
+                                .withVerbs("*")
+                                .build(),
+                        new V1PolicyRuleBuilder().withApiGroups("policy")
+                                .withResources("poddisruptionbudgets")
+                                .withVerbs("*")
+                                .build(),
+                        new V1PolicyRuleBuilder().withApiGroups("batch")
+                                .withResources("jobs")
+                                .withVerbs("*")
+                                .build())
+
+                .build();
+    }*/
+    private V1beta1Role getBookkeeperOperatorRole() {
+        return new V1beta1RoleBuilder()
+                .withKind("Role")
+                .withApiVersion("rbac.authorization.k8s.io/v1beta1")   //v1beta1 instead of v1
+                .withMetadata(new V1ObjectMetaBuilder().withName(BOOKKEEPER_OPERATOR).build())
+                .withRules(new V1beta1PolicyRuleBuilder().withApiGroups(CUSTOM_RESOURCE_GROUP_BOOKKEEPER)
+                                .withResources("*")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder().withApiGroups("")
+                                .withResources("pods", "services", "endpoints", "persistentvolumeclaims", "events", "configmaps", "secrets")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder().withApiGroups("apps")
+                                .withResources("deployments", "daemonsets", "replicasets", "statefulsets")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder().withApiGroups("policy")
+                                .withResources("poddisruptionbudgets")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder().withApiGroups("batch")
+                                .withResources("jobs")
+                                .withVerbs("*")
+                                .build())
+
+                .build();
+    }
+
+    private V1beta1ClusterRole getBookkeeperOperatorClusterRole() {
+        return new V1beta1ClusterRoleBuilder()
+                .withKind("ClusterRole")
+                .withApiVersion("rbac.authorization.k8s.io/v1beta1")       //v1beta1 instead of v1
+                .withMetadata(new V1ObjectMetaBuilder().withName(BOOKKEEPER_OPERATOR).build())
+                .withRules(new V1beta1PolicyRuleBuilder().withApiGroups("")
+                                .withResources("nodes", "pods", "services", "endpoints", "persistentvolumeclaims", "events", "configmaps", "secrets")
+                                .withVerbs("get", "watch", "list", "create")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder().withApiGroups("admissionregistration.k8s.io")
+                                .withResources("*")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder().withApiGroups("bookkeeper.pravega.io")
+                                .withResources("*")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder().withApiGroups("policy")
+                                .withResources("poddisruptionbudgets")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder().withApiGroups("apps")
+                                .withResources("deployments", "daemonsets", "replicasets", "statefulsets")
+                                .withVerbs("*")
+                                .build())
+                .build();
+    }
+
+
+    private V1beta1RoleBinding getBookkeeperOperatorRoleBinding() {
+        return new V1beta1RoleBindingBuilder().withKind("RoleBinding")
+                .withApiVersion("rbac.authorization.k8s.io/v1beta1")  //v1beta1 instead of v1
+                .withMetadata(new V1ObjectMetaBuilder()
+                        .withName("bookkeeper-operator")
+                        .build())
+                .withSubjects(new V1beta1SubjectBuilder().withKind("ServiceAccount")
+                        .withName(BOOKKEEPER_OPERATOR)
+                        .build())
+                .withRoleRef(new V1beta1RoleRefBuilder().withKind("Role")
+                        .withName(BOOKKEEPER_OPERATOR)
+                        .withApiGroup("rbac.authorization.k8s.io")
+                        .build())
+                .build();
+    }
+
+    private V1beta1ClusterRoleBinding getBookkeeperOperatorClusterRoleBinding() {
+        return new V1beta1ClusterRoleBindingBuilder().withKind("ClusterRoleBinding")
+                .withApiVersion("rbac.authorization.k8s.io/v1beta1")
+                .withMetadata(new V1ObjectMetaBuilder()
+                        .withName("bookkeeper-operator")
+                        .build())
+                .withSubjects(new V1beta1SubjectBuilder().withKind("ServiceAccount")
+                        .withName(BOOKKEEPER_OPERATOR)
+                        .withNamespace(NAMESPACE)
+                        .build())
+                .withRoleRef(new V1beta1RoleRefBuilder().withKind("ClusterRole")
+                        .withName(BOOKKEEPER_OPERATOR)
+                        .withApiGroup("rbac.authorization.k8s.io")
+                        .build())
+                .build();
+    }
+    private V1ServiceAccount getBookkeeperServiceAccount() {
+        return new V1ServiceAccountBuilder().withKind("ServiceAccount")
+                .withApiVersion("v1")
+                .withMetadata(new V1ObjectMetaBuilder()
+                        .withName("bookkeeper-operator")
+                        .build())
+                .build();
+    }
+
+    private V1Deployment getBookkeeperOperatorDeployment() {
+        V1Container container = new V1ContainerBuilder().withName(BOOKKEEPER_OPERATOR)
+                .withImage(BOOKKEEPER_OPERATOR_IMAGE)
+                .withPorts(new V1ContainerPortBuilder().withContainerPort(60000).build())
+                .withCommand(BOOKKEEPER_OPERATOR)
+                // start the bookkeeper-operator in test mode to disable minimum replica count check.
+                .withArgs("-test")
+                .withImagePullPolicy(IMAGE_PULL_POLICY)
+                .withEnv(new V1EnvVarBuilder().withName("WATCH_NAMESPACE")
+                                .withValue("")
+                                .build(),
+                        new V1EnvVarBuilder().withName("POD_NAME")
+                                .withValueFrom(new V1EnvVarSourceBuilder()
+                                        .withFieldRef(new V1ObjectFieldSelectorBuilder()
+                                                .withFieldPath("metadata.name")
+                                                .build())
+                                        .build())
+                                .build(),
+                        new V1EnvVarBuilder().withName("OPERATOR_NAME")
+                                .withValue(BOOKKEEPER_OPERATOR)
+                                .build())
+                .withVolumeMounts(new V1VolumeMountBuilder().withName("versions-volume")
+                        .withMountPath("/tmp/config")
+                        .build())
+                .build();
+        //V1Volume volume = new V1VolumeBuilder().withName("versions-volume")
+                 //.withConfigMap(new V1ConfigMap().metadata(new V1ObjectMeta().name("bk-supported-versions-map"))
+
+
+        return new V1DeploymentBuilder().withMetadata(new V1ObjectMetaBuilder().withName(BOOKKEEPER_OPERATOR)
+                .withNamespace(NAMESPACE)
+                .build())
+                .withKind("Deployment")
+                .withApiVersion("apps/v1")
+                .withSpec(new V1DeploymentSpecBuilder().withMinReadySeconds(MIN_READY_SECONDS)
+                        .withReplicas(1)
+                        .withSelector(new V1LabelSelectorBuilder()
+                                .withMatchLabels(ImmutableMap.of("name", BOOKKEEPER_OPERATOR))
+                                .build())
+                        .withTemplate(new V1PodTemplateSpecBuilder()
+                                .withMetadata(new V1ObjectMetaBuilder()
+                                        .withLabels(ImmutableMap.of("name", BOOKKEEPER_OPERATOR))
+                                        .build())
+                                .withSpec(new V1PodSpecBuilder()
+                                        .withServiceAccountName(BOOKKEEPER_OPERATOR)
+                                        .withContainers(container)
+                                        .withVolumes(new V1VolumeBuilder().withName("versions-volume")
+                                                .withConfigMap(new V1ConfigMapVolumeSource().name("bk-supported-versions-map"))
+                                                .build())
+                                        .build())
+                                .build())
+                        .build())
+                .build();
+    }
+
+    private V1ConfigMap getBookkeeperOperatorVersionMap() {
+        return new V1ConfigMap().kind("ConfigMap")
+                .apiVersion("v1")
+                    .metadata(new V1ObjectMeta()
+                        .name("bk-supported-versions-map"))
+                    .data(ImmutableMap.of("keys","0.1.0:0.1.0\n" +
+                                    "        0.2.0:0.2.0\n" +
+                                    "        0.3.0:0.3.0,0.3.1,0.3.2\n" +
+                                    "        0.3.1:0.3.1,0.3.2\n" +
+                                    "        0.3.2:0.3.2\n" +
+                                    "        0.4.0:0.4.0\n" +
+                                    "        0.5.0:0.5.0,0.5.1,0.6.0,0.6.1,0.6.2,0.7.0,0.7.1\n" +
+                                    "        0.5.1:0.5.1,0.6.0,0.6.1,0.6.2,0.7.0,0.7.1\n" +
+                                    "        0.6.0:0.6.0,0.6.1,0.6.2,0.7.0,0.7.1\n" +
+                                    "        0.6.1:0.6.1,0.6.2,0.7.0,0.7.1\n" +
+                                    "        0.6.2:0.6.2,0.7.0,0.7.1\n" +
+                                    "        0.7.0:0.7.0,0.7.1\n" +
+                                    "        0.7.1:0.7.1")
+                    );
+
+    }
+
+    /*private V1ConfigMap getBookkeeperOperatorConfigMap() {
+        Map<String,String>  dataMap = new HashMap<>();
+        dataMap.put("PRAVEGA_CLUSTER_NAME", PRAVEGA_ID);
+        dataMap.put("WAIT_FOR", ZK_SERVICE_NAME);
+        return new V1ConfigMap()
+                .apiVersion("v1")
+                .kind("ConfigMap")
+                .metadata(new V1ObjectMeta().name("bk-config-map"))
+                .data(dataMap);*/
+
+        private V1ConfigMap getBookkeeperOperatorConfigMap() {
+            Map<String,String>  dataMap = new HashMap<>();
+            dataMap.put("PRAVEGA_CLUSTER_NAME", PRAVEGA_ID);
+            dataMap.put("WAIT_FOR", ZK_SERVICE_NAME);
+            return new V1ConfigMapBuilder().withApiVersion("v1")
+                    .withKind("ConfigMap")
+                    .withMetadata(new V1ObjectMeta().name(CONFIG_MAP_BOOKKEEPER))
+                    .withData(dataMap)
+                    .build();
+
+    }
+
+    /**
+     * Helper method to create the BK Cluster Spec which specifies just those values in the
+     * spec which need to be patched. Other values remain same as were specified at the time of
+     * deployment.
+     * @param service Name of the service to be patched (bookkeeper/ segment store/ controller).
+     * @param replicaCount Number of replicas.
+     * @param component Name of the component (pravega/ bookkeeper).
+     *
+     * @return the new Pravega Cluster Spec containing the values that need to be patched.
+     */
+    protected static Map<String, Object> buildPatchedBookkeeperClusterSpec(String service, int replicaCount, String component) {
+
+        final Map<String, Object> componentSpec = ImmutableMap.<String, Object>builder()
+                .put(service, replicaCount)
+                .build();
+
+        return ImmutableMap.<String, Object>builder()
+                .put("apiVersion", CUSTOM_RESOURCE_API_VERSION_BOOKKEEPER)
+                .put("kind", CUSTOM_RESOURCE_KIND_BOOKKEEPER)
+                .put("metadata", ImmutableMap.of("name", BOOKKEEPER_ID, "namespace", NAMESPACE))
+                .put("spec", ImmutableMap.builder()
+                        .put(component, componentSpec)
+                        .build())
+                .build();
+    }
+
+//////////////////////
+
 
     @Override
     public void clean() {
