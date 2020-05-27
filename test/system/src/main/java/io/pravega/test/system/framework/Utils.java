@@ -18,7 +18,7 @@ import io.pravega.test.system.framework.services.docker.HDFSDockerService;
 import io.pravega.test.system.framework.services.docker.PravegaControllerDockerService;
 import io.pravega.test.system.framework.services.docker.PravegaSegmentStoreDockerService;
 import io.pravega.test.system.framework.services.docker.ZookeeperDockerService;
-import io.pravega.test.system.framework.services.kubernetes.BookkeeperK8sService;
+import io.pravega.test.system.framework.services.kubernetes.*;
 import io.pravega.test.system.framework.services.kubernetes.PravegaControllerK8sService;
 import io.pravega.test.system.framework.services.kubernetes.PravegaSegmentStoreK8sService;
 import io.pravega.test.system.framework.services.kubernetes.ZookeeperK8sService;
@@ -88,7 +88,18 @@ public class Utils {
                 return new BookkeeperK8sService(serviceId, zkUri, getPravegaProperties());
         }
     }
-
+    public static Service createPravegaService(final URI zkUri, final URI bkUri) {
+        String serviceId = "pravega";
+        switch (EXECUTOR_TYPE) {
+            case REMOTE_SEQUENTIAL:
+                return new BookkeeperService(serviceId, zkUri);
+            case DOCKER:
+                return new BookkeeperDockerService(serviceId, zkUri);
+            case KUBERNETES:
+            default:
+                return new PravegaK8sService(serviceId, zkUri, bkUri,getPravegaProperties());
+        }
+    }
     public static Service createPravegaControllerService(final URI zkUri, String serviceName) {
         switch (EXECUTOR_TYPE) {
             case REMOTE_SEQUENTIAL:

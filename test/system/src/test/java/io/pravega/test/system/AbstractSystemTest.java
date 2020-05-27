@@ -47,9 +47,14 @@ abstract class AbstractSystemTest {
         return zkUris.get(0);
     }
 
-    static void startBookkeeperInstances(final URI zkUri) {
+    static URI startBookkeeperInstances(final URI zkUri) {
         Service bkService = Utils.createBookkeeperService(zkUri);
-        startBkService(bkService);
+        if (!bkService.isRunning()) {
+            bkService.start(true);
+        }
+        List<URI> bkUri = bkService.getServiceDetails();
+        log.debug("Bookkeeper service details: {}", bkUri);
+        return bkUri.get(0);
     }
 
     private static void startBkService(Service bkService) {
@@ -59,7 +64,10 @@ abstract class AbstractSystemTest {
         List<URI> bkUris = bkService.getServiceDetails();
         log.debug("Bookkeeper service details: {}", bkUris);
     }
-
+    static void startpravegaInstances(final URI zkUri, URI bkUri) {
+        Service bkService = Utils.createPravegaService(zkUri, bkUri);
+        startBkService(bkService);
+    }
     static URI ensureControllerRunning(final URI zkUri) {
         Service conService = Utils.createPravegaControllerService(zkUri);
         return startControllerService(conService);
