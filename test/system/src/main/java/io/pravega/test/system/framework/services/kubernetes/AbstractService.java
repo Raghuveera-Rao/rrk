@@ -385,9 +385,9 @@ public abstract class AbstractService implements Service {
     }
 
     private V1Deployment getPravegaOperatorDeployment() {
-        V1Volume volume = new V1VolumeBuilder().withName("webhook-cert")
-                                               .withSecret(new V1SecretVolumeSource().secretName(PRAVEGA_OPERATOR_SECRETNAME))
-                                               .withName("versions-volume")
+        V1Volume volume1 = new V1VolumeBuilder().withName(WEBHOOKCRT)
+                                               .withSecret(new V1SecretVolumeSource().secretName(PRAVEGA_OPERATOR_SECRETNAME)).build();
+        V1Volume volume2 = new V1VolumeBuilder().withName("versions-volume")
                                                .withConfigMap(new V1ConfigMapVolumeSource().name(PRAVEGA_OPERATOR_CONFIGNAME))
                 .build();
         V1Container container = new V1ContainerBuilder().withName(PRAVEGA_OPERATOR)
@@ -429,7 +429,8 @@ public abstract class AbstractService implements Service {
                                                                                                                            .build())
                                                                                                      .withSpec(new V1PodSpecBuilder()
                                                                                                                        .withContainers(container)
-                                                                                                                        .withVolumes(volume)
+                                                                                                                        .withVolumes(volume1)
+                                                                                                                        .withVolumes(volume2)
                                                                                                                        .build())
                                                                                                      .build())
                                                                                .build())
