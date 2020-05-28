@@ -400,16 +400,19 @@ public abstract class AbstractService implements Service {
                                                         .withArgs("-test")
                                                         .withImagePullPolicy(IMAGE_PULL_POLICY)
                                                         .withEnv(new V1EnvVarBuilder().withName("WATCH_NAMESPACE")
-                                                                                      .withValueFrom(new V1EnvVarSourceBuilder()
-                                                                                                             .withFieldRef(new V1ObjectFieldSelectorBuilder()
-                                                                                                                                   .withFieldPath("metadata.namespace")
-                                                                                                                                   .build())
-                                                                                                             .build())
-                                                                                      .build(),
-                                                                 new V1EnvVarBuilder().withName("OPERATOR_NAME")
-                                                                                      .withValue(PRAVEGA_OPERATOR)
-                                                                                      .build())
-                                                        .build();
+                                                                        .withValue("")
+                                                                        .build(),
+                                                                new V1EnvVarBuilder().withName("POD_NAME")
+                                                                          .withValueFrom(new V1EnvVarSourceBuilder()
+                                                                                  .withFieldRef(new V1ObjectFieldSelectorBuilder()
+                                                                                          .withFieldPath("metadata.name")
+                                                                                          .build())
+                                                                                  .build())
+                                                                         .build(),
+                                                                new V1EnvVarBuilder().withName("OPERATOR_NAME")
+                                                                        .withValue(PRAVEGA_OPERATOR)
+                                                                        .build())
+                .build();
         return new V1DeploymentBuilder().withMetadata(new V1ObjectMetaBuilder().withName(PRAVEGA_OPERATOR)
                                                                                .withNamespace(NAMESPACE)
                                                                                .build())
