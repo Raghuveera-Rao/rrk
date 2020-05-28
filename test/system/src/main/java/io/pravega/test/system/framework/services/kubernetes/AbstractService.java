@@ -100,6 +100,7 @@ public abstract class AbstractService implements Service {
                         .thenCompose(v -> k8sClient.createClusterRole(getPravegaOperatorClusterRole()))
                         .thenCompose(v -> k8sClient.createRoleBinding(NAMESPACE, getPravegaOperatorRoleBinding()))
                         .thenCompose(v -> k8sClient.createClusterRoleBinding(getPravegaOperatorClusterRoleBinding()))
+                        .thenCompose(v -> k8sClient.createServiceAccount(NAMESPACE, getPravegaServiceAccount()))
                         //deploy pravega operator.
                         .thenCompose(v -> k8sClient.createDeployment(NAMESPACE, getPravegaOperatorDeployment()))
                         // wait until pravega operator is running, only one instance of operator is running.
@@ -639,6 +640,14 @@ public abstract class AbstractService implements Service {
                 .withApiVersion("v1")
                 .withMetadata(new V1ObjectMetaBuilder()
                         .withName("bookkeeper-operator")
+                        .build())
+                .build();
+    }
+    private V1ServiceAccount getPravegaServiceAccount() {
+        return new V1ServiceAccountBuilder().withKind("ServiceAccount")
+                .withApiVersion("v1")
+                .withMetadata(new V1ObjectMetaBuilder()
+                        .withName("pravega-operator")
                         .build())
                 .build();
     }
