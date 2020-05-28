@@ -394,8 +394,8 @@ public abstract class AbstractService implements Service {
                                                         .withImage(PRAVEGA_OPERATOR_IMAGE)
                                                         .withPorts(new V1ContainerPortBuilder().withContainerPort(60000).build())
                                                         .withCommand(PRAVEGA_OPERATOR)
-                                                        .withVolumeMounts(new V1VolumeMount().name(WEBHOOKCRT).mountPath(MOUNTPATH).readOnly(true))
-                                                        .withVolumeMounts(new V1VolumeMount().name("versions-volume").mountPath("/tmp/config"))
+                                                        .withVolumeMounts(new V1VolumeMount().name(WEBHOOKCRT).mountPath(MOUNTPATH).readOnly(true),
+                                                                new V1VolumeMount().name("versions-volume").mountPath("/tmp/config"))
                                                         // start the pravega-operator in test mode to disable minimum replica count check.
                                                         .withArgs("-test")
                                                         .withImagePullPolicy(IMAGE_PULL_POLICY)
@@ -429,8 +429,7 @@ public abstract class AbstractService implements Service {
                                                                                                                            .build())
                                                                                                      .withSpec(new V1PodSpecBuilder()
                                                                                                                        .withContainers(container)
-                                                                                                                        .withVolumes(volume1)
-                                                                                                                        .withVolumes(volume2)
+                                                                                                                        .withVolumes(volume1, volume2)
                                                                                                                        .build())
                                                                                                      .build())
                                                                                .build())
