@@ -81,6 +81,11 @@ public abstract class AbstractService implements Service {
     private static final String ZK_SERVICE_NAME = "zookeeper-client:2181";
     private static final String JOURNALDIRECTORIES = "bk/journal/j0,/bk/journal/j1,/bk/journal/j2,/bk/journal/j3";
     private static final String LEDGERDIRECTORIES = "/bk/ledgers/l0,/bk/ledgers/l1,/bk/ledgers/l2,/bk/ledgers/l3";
+    private static final String WEBHOOKCRT = "webhook-cert";
+    private static final String MOUNTPATH = "/tmp/k8s-webhook-server/serving-certs";
+    private static final String PRAVEGA_OPERATOR_SECRETNAME="selfsigned-cert-tls";
+    private static final String PRAVEGA_OPERATOR_CONFIGNAME="supported-versions-map";
+
     final K8sClient k8sClient;
     private final String id;
 
@@ -380,10 +385,17 @@ public abstract class AbstractService implements Service {
     }
 
     private V1Deployment getPravegaOperatorDeployment() {
+        V1Volume volume = new V1VolumeBuilder().withName("webhook-cert")
+                                               .withSecret(new V1SecretVolumeSource().secretName(PRAVEGA_OPERATOR_SECRETNAME))
+                                               .withName("versions-volume")
+                                               .withConfigMap(new V1ConfigMapVolumeSource().name(PRAVEGA_OPERATOR_CONFIGNAME))
+                .build();
         V1Container container = new V1ContainerBuilder().withName(PRAVEGA_OPERATOR)
                                                         .withImage(PRAVEGA_OPERATOR_IMAGE)
                                                         .withPorts(new V1ContainerPortBuilder().withContainerPort(60000).build())
                                                         .withCommand(PRAVEGA_OPERATOR)
+                                                        .withVolumeMounts(new V1VolumeMount().name(WEBHOOKCRT).mountPath(MOUNTPATH).readOnly(true))
+                                                        .withVolumeMounts(new V1VolumeMount().name("versions-volume").mountPath("/tmp/config"))
                                                         // start the pravega-operator in test mode to disable minimum replica count check.
                                                         .withArgs("-test")
                                                         .withImagePullPolicy(IMAGE_PULL_POLICY)
@@ -414,6 +426,7 @@ public abstract class AbstractService implements Service {
                                                                                                                            .build())
                                                                                                      .withSpec(new V1PodSpecBuilder()
                                                                                                                        .withContainers(container)
+                                                                                                                        .withVolumes(volume)
                                                                                                                        .build())
                                                                                                      .build())
                                                                                .build())
