@@ -13,6 +13,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import io.kubernetes.client.models.*;
 import io.kubernetes.client.proto.V1;
+import io.kubernetes.client.proto.V1beta1Certificates;
 import io.pravega.test.system.framework.kubernetes.ClientFactory;
 import io.pravega.test.system.framework.kubernetes.K8sClient;
 import io.pravega.test.system.framework.services.Service;
@@ -330,7 +331,15 @@ public abstract class AbstractService implements Service {
                            new V1beta1PolicyRuleBuilder().withApiGroups("apps")
                                                          .withResources("deployments", "daemonsets", "replicasets", "statefulsets")
                                                          .withVerbs("*")
-                                                         .build())
+                                                         .build(),
+                        new V1beta1PolicyRuleBuilder().withApiGroups("policy")
+                                .withResources("poddisruptionbudgets")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder().withApiGroups("batch")
+                                .withResources("batch")
+                                .withVerbs("*")
+                                .build())
                 .build();
     }
 
@@ -339,17 +348,33 @@ public abstract class AbstractService implements Service {
                 .withKind("ClusterRole")
                 .withApiVersion("rbac.authorization.k8s.io/v1beta1")
                 .withMetadata(new V1ObjectMetaBuilder().withName(PRAVEGA_OPERATOR).build())
-                .withRules(new V1beta1PolicyRuleBuilder().withApiGroups("")
-                                .withResources("nodes")
-                                .withVerbs("get", "watch", "list")
+                .withRules(new V1beta1PolicyRuleBuilder()
+                                .withApiGroups("")
+                                .withResources("nodes","pods", "services", "endpoints", "persistentvolumeclaims", "events", "configmaps", "secrets")
+                                .withVerbs("get", "watch", "list", "create")
                                 .build(),
-                        new V1beta1PolicyRuleBuilder().withApiGroups("admissionregistration.k8s.io")
+                        new V1beta1PolicyRuleBuilder()
+                                .withApiGroups("admissionregistration.k8s.io")
                                 .withResources("*")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder()
+                                .withApiGroups(CUSTOM_RESOURCE_GROUP_PRAVEGA)
+                                .withResources("*")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder()
+                                .withApiGroups("policy")
+                                .withResources("poddisruptionbudgets")
+                                .withVerbs("*")
+                                .build(),
+                        new V1beta1PolicyRuleBuilder()
+                                .withApiGroups("apps")
+                                .withResources("deployments","daemonsets", "replicasets", "statefulsets")
                                 .withVerbs("*")
                                 .build())
                 .build();
     }
-
     private V1beta1RoleBinding getPravegaOperatorRoleBinding() {
         return new V1beta1RoleBindingBuilder().withKind("RoleBinding")
                                               .withApiVersion("rbac.authorization.k8s.io/v1beta1")
