@@ -821,7 +821,7 @@ project('test:system') {
     
     task createVersionMapsAndCertificates(type: Exec) {
         description 'Creates version maps for bookkeeper and pravega. Creates Issuer and Certificate needed for p-operator'
-        commandLine './kubernetes/setupTestPod.sh'
+        commandLine './kubernetes/createVersionMapsAndCertificates.sh'
     }
 
     task startK8SystemTests(type: Test) {
