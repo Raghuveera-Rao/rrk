@@ -818,10 +818,16 @@ project('test:system') {
         dependsOn 'jar'
         commandLine './kubernetes/setupTestPod.sh'
     }
+    
+    task createVersionMapsAndCertificates(type: Exec) {
+        description 'Creates version maps for bookkeeper and pravega. Creates Issuer and Certificate needed for p-operator'
+        commandLine './kubernetes/createVersionMapsAndCertificates.sh'
+    }
 
     task startK8SystemTests(type: Test) {
         tasks.withType(Exec) { environment "tier2Type", System.getProperty("tier2Type", "nfs") }
         dependsOn 'copyTestsToK8sCluster' // ensure test artifacts are copied to the cluster.
+        dependsOn 'createVersionMapsAndCertificates' // ensure versionmaps and certificates are created
 
         description 'Used to invoke K8s based System Tests, example usage: gradle startK8SystemTests'
         testClassesDirs = sourceSets.test.output.classesDirs
@@ -831,6 +837,8 @@ project('test:system') {
         systemProperty "execType", "KUBERNETES"
         systemProperty "pravegaOperatorImage", System.getProperty("pravegaOperatorImage", "pravega/pravega-operator:latest")
         systemProperty "zookeeperOperatorImage", System.getProperty("zookeeperOperatorImage", "pravega/zookeeper-operator:latest")
+        systemProperty "bookkeeperOperatorImage", System.getProperty("bookkeeperOperatorImage", "pravega/bookkeeper-operator:latest")
+
         // The below properties are used to to specify the pravega docker image properties
         // e.g: private-docker-repo/pravega-prefix/pravega:version
         if (System.getProperty("dockerRegistryUrl") != null) { // docker images are pulled from dockerhub if dockerRegistryUrl is not specified.
@@ -843,7 +851,7 @@ project('test:system') {
         systemProperty "zookeeperImageVersion", System.getProperty("zookeeperImageVersion", "latest") // zookeeper image version
         systemProperty "imageVersion", System.getProperty("imageVersion") // pravega version.
         // bookkeeper version defaults to pravega version.
-        systemProperty "pravegaBookkeeperVersion", System.getProperty("pravegaBookkeeperVersion", System.getProperty("imageVersion"))
+        systemProperty "bookkeeperImageVersion", System.getProperty("bookkeeperImageVersion", "latest") // // bookkeeper image version
 
         // tier2Type , default is NFS.
         systemProperty "tier2Type", System.getProperty("tier2Type", "nfs")
