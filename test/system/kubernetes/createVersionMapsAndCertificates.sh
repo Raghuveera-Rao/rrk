@@ -75,7 +75,7 @@ spec:
 EOF
 
 # Step 4: Create Certificate, if already created the error is ignored.
-cat <<EOF | kubectl create -f -
+cat <<EOF | kubectl create -f - || true
 apiVersion: cert-manager.io/v1alpha2
 kind: Certificate
 metadata:
