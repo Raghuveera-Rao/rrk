@@ -11,23 +11,25 @@ package io.pravega.test.system.framework.services.kubernetes;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
-import io.kubernetes.client.models.*;
-import io.kubernetes.client.proto.V1;
+import io.kubernetes.client.custom.IntOrString;
+import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.proto.V1beta1Certificates;
 import io.pravega.test.system.framework.kubernetes.ClientFactory;
 import io.pravega.test.system.framework.kubernetes.K8sClient;
 import io.pravega.test.system.framework.services.Service;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 import static io.pravega.common.Exceptions.checkNotNullOrEmpty;
-import static java.util.Collections.newSetFromMap;
 import static java.util.Collections.singletonList;
+
 
 @Slf4j
 public abstract class AbstractService implements Service {
@@ -86,6 +88,7 @@ public abstract class AbstractService implements Service {
     private static final String MOUNTPATH = "/tmp/k8s-webhook-server/serving-certs";
     private static final String PRAVEGA_OPERATOR_SECRETNAME="selfsigned-cert-tls";
     private static final String PRAVEGA_OPERATOR_CONFIGNAME="supported-versions-map";
+    //private static final  IntOrString TRANSPORTPORT=443 : "443";
 
     final K8sClient k8sClient;
     private final String id;
@@ -107,6 +110,9 @@ public abstract class AbstractService implements Service {
                         .thenCompose(v -> k8sClient.createRoleBinding(NAMESPACE, getPravegaOperatorRoleBinding()))
                         .thenCompose(v -> k8sClient.createClusterRoleBinding(getPravegaOperatorClusterRoleBinding()))
                         .thenCompose(v -> k8sClient.createServiceAccount(NAMESPACE, getPravegaServiceAccount()))
+                        //.thenCompose(v -> k8sClient.createSecret(NAMESPACE, getPravegaOperatorSecretIssuer()))
+                        //.thenCompose(v -> k8sClient.createSecret(NAMESPACE, getPravegaOperatorSecretCertificate()))
+                        .thenCompose(v -> k8sClient.createService(NAMESPACE,getPravegaOperatorService()))
                         //deploy pravega operator.
                         .thenCompose(v -> k8sClient.createDeployment(NAMESPACE, getPravegaOperatorDeployment()))
                         // wait until pravega operator is running, only one instance of operator is running.
@@ -407,6 +413,165 @@ public abstract class AbstractService implements Service {
                         .withApiGroup("rbac.authorization.k8s.io")
                         .build())
                 .build();
+    }
+    protected Map<String, Object> portsSpec(String port, String protocol, String targetPort) {
+        return ImmutableMap.<String, Object>builder().put("port", port)
+                .put("protocol", protocol)
+                .put("targetPort", targetPort)
+                .build();
+    }
+  /*  private Map<String, Object> getPravegaOperatorService() {
+     *//*   final Map<String, Object> ports = ImmutableMap.<String, Object>builder().put("port", "443")
+                .put("protocol", "TCP")
+                .put("targetPort", "443").build();*//*
+
+        final Map<String, Object> serviceSpec = ImmutableMap.<String, Object>builder().put("ports", portsSpec("443", "TCP", "443"))
+                .put("selector", ImmutableMap.<String, Object>builder().put("component", "pravega-operator"))
+                .put("sessionAffinity", "None")
+                .put("type", "ClusterIP")
+                .build();
+        return ImmutableMap.<String, Object>builder()
+                .put("apiVersion", "v1")
+                .put("kind", "Service")
+                .put("metadata", ImmutableMap.of("name", "pravega-webhook-svc", "namespace", NAMESPACE))
+                .put("spec", serviceSpec)
+                .build();
+    }*/
+
+    private V1Service getPravegaOperatorService() {
+     /*   final Map<String, Object> ports = ImmutableMap.<String, Object>builder().put("port", "443")
+                .put("protocol", "TCP")
+                .put("targetPort", "443").build();*/
+
+        /*final Map<String, Object> serviceSpec = ImmutableMap.<String, Object>builder().put("ports", portsSpec("443", "TCP", "443"))
+                .put("selector", ImmutableMap.<String, Object>builder().put("component", "pravega-operator"))
+                .put("sessionAffinity", "None")
+                .put("type", "ClusterIP")
+                .build();*/
+        return new V1ServiceBuilder().withApiVersion("v1")
+                .withKind("Service")
+                .withMetadata(new V1ObjectMetaBuilder()
+                        .withName("pravega-webhook-svc")
+                        .withNamespace(NAMESPACE)
+                        .build())
+                .withSpec(new V1ServiceSpecBuilder()
+                        .withPorts(new V1ServicePortBuilder().withPort(443)
+                                .withProtocol("TCP")
+                                .withTargetPort(new IntOrString(443))
+                                .build())
+                        .withSessionAffinity("None")
+                        .withType("ClusterIP")
+                        .withSelector(ImmutableMap.of("component", "pravega-operator"))
+                        .build())
+                .build();
+    }
+
+/*
+                .put("apiVersion", "v1")
+                .put("kind", "Service")
+                .put("metadata", ImmutableMap.of("name", "pravega-webhook-svc", "namespace", NAMESPACE))
+                .put("spec", serviceSpec)
+                .build();
+    }*/
+
+    protected Map<String, Object> service(String name, String namespace, String path) {
+        return ImmutableMap.<String, Object>builder().put("name", name)
+                .put("namespace", namespace)
+                .put("path", path)
+                .build();
+    }
+
+    protected Map<String, Object> rules(String apiGroups, String apiVersions, List<String> operations, String resources, String scope) {
+        return ImmutableMap.<String, Object>builder().put("apiGroups", apiGroups)
+                .put("apiVersions", apiVersions)
+                .put("operations", operations)
+                .put("resources", resources)
+                .put("scope",scope)
+                .build();
+    }
+/*
+    private Map<String, Object> getPravegaOperatorValidatingWebhookConfiguration() {
+        List<String> operations = new ArrayList<String>();
+        operations.add("CREATE");//And so on..
+        operations.add("UPDATE");
+        final Map<String, Object> webhooks = ImmutableMap.<String, Object>builder().put("clientConfig", ImmutableMap.<String, Object>builder().put("service", service("pravega-webhook-svc",NAMESPACE,"/validate-pravega-pravega-io-v1beta1-pravegacluster")))
+                .put("name", "pravegawebhook.pravega.io")
+                .put("rules", rules("pravega.pravega.io", "v1beta1", operations, "pravegaclusters", "*"))
+                .put("timeoutSeconds", "30")
+                .build();
+        return ImmutableMap.<String, Object>builder()
+                .put("apiVersion", "v1")
+                .put("kind", "Service")
+                .put("metadata", ImmutableMap.of("name", "pravega-webhook-svc", "namespace", NAMESPACE))
+                .put("webhooks", webhooks)
+                .build();
+
+    }
+*/
+    private V1beta1ValidatingWebhookConfiguration getPravegaOperatorValidatingWebhookConfiguration1() {
+        List<String> operations = new ArrayList<String>();
+        operations.add("CREATE");//And so on..
+        operations.add("UPDATE");
+        //final Map<String, Object> webhooks = ImmutableMap.<String, Object>builder().put("service", service("pravega-webhook-svc",NAMESPACE,"/validate-pravega-pravega-io-v1beta1-pravegacluster"))
+
+        return new V1beta1ValidatingWebhookConfigurationBuilder().withApiVersion("admissionregistration.k8s.io/v1beta1")
+                .withKind("ValidatingWebhookConfiguration")
+                .withMetadata(new V1ObjectMetaBuilder()
+                        .withName("pravega-webhook-config")
+                        .withAnnotations(ImmutableMap.of("cert-manager.io/inject-ca-from", "default/selfsigned-cert"))
+                        .build())
+                .withWebhooks(new V1beta1ValidatingWebhookBuilder()
+                        .withClientConfig(new AdmissionregistrationV1beta1WebhookClientConfigBuilder()
+                                .withService(new AdmissionregistrationV1beta1ServiceReferenceBuilder()
+                                        .withName("pravega-webhook-svc")
+                                        .withNamespace(NAMESPACE)
+                                        .withPath("/validate-pravega-pravega-io-v1beta1-pravegacluster")
+                                        .build())
+                                .build())
+                        .withName("pravegawebhook.pravega.io")
+                        .withRules(new V1beta1RuleWithOperationsBuilder()
+                                .withApiGroups("pravega.pravega.io")
+                                .withApiVersions("v1beta1")
+                                .withOperations(operations)
+                                .withResources("pravegaclusters")
+                                .withScope("*")
+                                .build())
+                        .withTimeoutSeconds(30)
+                        .build())
+                .build();
+
+    }
+
+    private Map<String, Object> getPravegaOperatorSecretIssuer() {
+        Map<String,String>  dataMap = new HashMap<>();
+        return ImmutableMap.<String, Object>builder()
+                .put("apiVersion", "cert-manager.io/v1alpha2")
+                .put("kind", "Issuer")
+                .put("metadata", ImmutableMap.of("name", "test-selfsigned", "namespace", NAMESPACE))
+                .put("spec", (ImmutableMap.<String, Map<String,String>>builder().put("selfSigned", dataMap)))
+                .build();
+
+    }
+    private Map<String, Object> getPravegaOperatorSecretCertificate() {
+        List<String> names = new ArrayList<String>();
+        names.add("pravega-webhook-svc");
+        names.add("pravega-webhook-svc.default.svc.cluster.local");
+        names.add("pravega-webhook-svc.default.svc");
+        final Map<String, Object> secretSpec = ImmutableMap.<String, Object>builder().put("secretName", "selfsigned-cert-tls")
+                .put("commonName", "pravega-webhook-svc.default.svc.cluster.local")
+                .put("version", BOOKKEEPER_VERSION)
+                .put("dnsNames", names)
+                .put("issuerRef", ImmutableMap.builder()
+                        .put("name", "test-selfsigned")
+                        .build())
+                .build();
+        return ImmutableMap.<String, Object>builder()
+                .put("apiVersion", "cert-manager.io/v1alpha2")
+                .put("kind", "Certificate")
+                .put("metadata", ImmutableMap.of("name", "selfsigned-cert", "namespace", NAMESPACE))
+                .put("spec", secretSpec)
+                .build();
+
     }
 
     private V1Deployment getPravegaOperatorDeployment() {
