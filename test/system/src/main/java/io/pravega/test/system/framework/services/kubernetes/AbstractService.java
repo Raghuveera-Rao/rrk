@@ -110,10 +110,10 @@ public abstract class AbstractService implements Service {
                         .thenCompose(v -> k8sClient.createRoleBinding(NAMESPACE, getPravegaOperatorRoleBinding()))
                         .thenCompose(v -> k8sClient.createClusterRoleBinding(getPravegaOperatorClusterRoleBinding()))
                         .thenCompose(v -> k8sClient.createServiceAccount(NAMESPACE, getPravegaServiceAccount()))
-                        .thenCompose(v -> k8sClient.createValidatingWebhookConfiguration(getPravegaOperatorValidatingWebhookConfiguration()) )
                         //.thenCompose(v -> k8sClient.createSecret(NAMESPACE, getPravegaOperatorSecretIssuer()))
                         //.thenCompose(v -> k8sClient.createSecret(NAMESPACE, getPravegaOperatorSecretCertificate()))
                         .thenCompose(v -> k8sClient.createService(NAMESPACE,getPravegaOperatorService()))
+                        .thenCompose(v -> k8sClient.createValidatingWebhookConfiguration(getPravegaOperatorValidatingWebhookConfiguration()) )
                         //deploy pravega operator.
                         .thenCompose(v -> k8sClient.createDeployment(NAMESPACE, getPravegaOperatorDeployment()))
                         // wait until pravega operator is running, only one instance of operator is running.
