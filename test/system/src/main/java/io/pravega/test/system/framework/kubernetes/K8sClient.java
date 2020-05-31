@@ -69,7 +69,7 @@ public class K8sClient {
     // When present, indicates that modifications should not be persisted. Only valid value is "All", or null.
     private static final String DRY_RUN = null;
     private static final String FIELD_MANAGER = "pravega-k8-client";
-    private static final String PRETTY_PRINT = "true";
+    private static final String PRETTY_PRINT = "false";
     private final ApiClient client;
     private final PodLogs logUtility;
     // size of the executor is 3 (1 thread is used to watch the pod status, 2 threads for background log copy).
@@ -101,7 +101,7 @@ public class K8sClient {
         try {
             log.debug("Initialize KUBERNETES api client");
             client = Config.defaultClient();
-            client.setDebugging(true); // this can be set to true enable http dump.
+            client.setDebugging(false); // this can be set to true enable http dump.
             client.setHttpClient(client.getHttpClient().newBuilder().readTimeout(DEFAULT_TIMEOUT_MINUTES, TimeUnit.MINUTES).build());
             Configuration.setDefaultApiClient(client);
             Runtime.getRuntime().addShutdownHook(new Thread(this::close));
