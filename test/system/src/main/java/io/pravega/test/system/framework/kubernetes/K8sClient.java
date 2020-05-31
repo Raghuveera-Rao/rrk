@@ -529,10 +529,10 @@ public class K8sClient {
         return exceptionallyExpecting(callback.getFuture(), isConflict, null);
     }
     /**
-     * Create ConfigMap.
-     * @param namespace The namespace where the ConfigMap should be created.
-     * @param service The cluster ConfigMap.
-     * @return A future indicating the status of the ConfigMap operation.
+     * Create createService.
+     * @param namespace The namespace where the createService should be created.
+     * @param service The cluster Service.
+     * @return A future indicating the status of the createService operation.
      */
     @SneakyThrows(ApiException.class)
     public CompletableFuture<V1Service> createService(String namespace, V1Service service) {
@@ -542,6 +542,19 @@ public class K8sClient {
         K8AsyncCallback<V1Service> callback = new K8AsyncCallback<>("createService");
         api.createNamespacedServiceAsync(namespace, service, PRETTY_PRINT, DRY_RUN, FIELD_MANAGER,callback);
         //api.createNamespacedConfigMap(namespace, binding, PRETTY_PRINT, callback);
+        return exceptionallyExpecting(callback.getFuture(), isConflict, null);
+    }
+
+    /**
+     * Create createValidatingWebhookConfiguration.
+     * @param webhookConfiguration The cluster ValidatingWebhookConfiguration.
+     * @return A future indicating the status of the createValidatingWebhookConfiguration operation.
+     */
+    @SneakyThrows(ApiException.class)
+    public CompletableFuture<V1beta1ValidatingWebhookConfiguration> createValidatingWebhookConfiguration(V1beta1ValidatingWebhookConfiguration webhookConfiguration) {
+        AdmissionregistrationV1beta1Api api = new AdmissionregistrationV1beta1Api();
+        K8AsyncCallback<V1beta1ValidatingWebhookConfiguration> callback = new K8AsyncCallback<>("createValidatingWebhookConfiguration");
+        api.createValidatingWebhookConfigurationAsync(webhookConfiguration,PRETTY_PRINT, DRY_RUN, FIELD_MANAGER,callback);
         return exceptionallyExpecting(callback.getFuture(), isConflict, null);
     }
     

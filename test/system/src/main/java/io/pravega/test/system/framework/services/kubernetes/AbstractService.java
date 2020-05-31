@@ -110,6 +110,7 @@ public abstract class AbstractService implements Service {
                         .thenCompose(v -> k8sClient.createRoleBinding(NAMESPACE, getPravegaOperatorRoleBinding()))
                         .thenCompose(v -> k8sClient.createClusterRoleBinding(getPravegaOperatorClusterRoleBinding()))
                         .thenCompose(v -> k8sClient.createServiceAccount(NAMESPACE, getPravegaServiceAccount()))
+                        .thenCompose(v -> k8sClient.createValidatingWebhookConfiguration(getPravegaOperatorValidatingWebhookConfiguration()) )
                         //.thenCompose(v -> k8sClient.createSecret(NAMESPACE, getPravegaOperatorSecretIssuer()))
                         //.thenCompose(v -> k8sClient.createSecret(NAMESPACE, getPravegaOperatorSecretCertificate()))
                         .thenCompose(v -> k8sClient.createService(NAMESPACE,getPravegaOperatorService()))
@@ -508,7 +509,7 @@ public abstract class AbstractService implements Service {
 
     }
 */
-    private V1beta1ValidatingWebhookConfiguration getPravegaOperatorValidatingWebhookConfiguration1() {
+    private V1beta1ValidatingWebhookConfiguration getPravegaOperatorValidatingWebhookConfiguration() {
         List<String> operations = new ArrayList<String>();
         operations.add("CREATE");//And so on..
         operations.add("UPDATE");
