@@ -325,7 +325,7 @@ public abstract class AbstractService implements Service {
     private V1beta1Role getPravegaOperatorRole() {
         return new V1beta1RoleBuilder()
                 .withKind("Role")
-                .withApiVersion("rbac.authorization.k8s.io/v1beta1")
+                .withApiVersion("rbac.authorization.k8s.io/v1")
                 .withMetadata(new V1ObjectMetaBuilder().withName(PRAVEGA_OPERATOR).build())
                 .withRules(new V1beta1PolicyRuleBuilder().withApiGroups(CUSTOM_RESOURCE_GROUP_PRAVEGA)
                                                          .withResources("*")
@@ -353,7 +353,7 @@ public abstract class AbstractService implements Service {
     private V1beta1ClusterRole getPravegaOperatorClusterRole() {
         return new V1beta1ClusterRoleBuilder()
                 .withKind("ClusterRole")
-                .withApiVersion("rbac.authorization.k8s.io/v1beta1")
+                .withApiVersion("rbac.authorization.k8s.io/v1")
                 .withMetadata(new V1ObjectMetaBuilder().withName(PRAVEGA_OPERATOR).build())
                 .withRules(new V1beta1PolicyRuleBuilder()
                                 .withApiGroups("")
@@ -384,7 +384,7 @@ public abstract class AbstractService implements Service {
     }
     private V1beta1RoleBinding getPravegaOperatorRoleBinding() {
         return new V1beta1RoleBindingBuilder().withKind("RoleBinding")
-                                              .withApiVersion("rbac.authorization.k8s.io/v1beta1")
+                                              .withApiVersion("rbac.authorization.k8s.io/v1")
                                               .withMetadata(new V1ObjectMetaBuilder()
                                                                     .withName("pravega-operator")
                                                                     .build())
