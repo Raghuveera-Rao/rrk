@@ -299,7 +299,9 @@ public abstract class AbstractService implements Service {
     }
 
     private V1beta1CustomResourceDefinition getPravegaCRD() {
-
+        ArrayList<String> crv= new ArrayList<String>();
+            crv.add("v1beta1");
+            crv.add("v1alpha1");
         return new V1beta1CustomResourceDefinitionBuilder()
                 .withApiVersion("apiextensions.k8s.io/v1beta1")
                 .withKind("CustomResourceDefinition")
@@ -313,6 +315,8 @@ public abstract class AbstractService implements Service {
                                                      .withSingular("pravegacluster")
                                                      .build())
                                   .withScope("Namespaced")
+                        .withConversion(new V1beta1CustomResourceConversionBuilder()
+                                .withConversionReviewVersions(crv).build())
                                   .withVersion(CUSTOM_RESOURCE_VERSION_PRAVEGA)
                                   .withNewSubresources()
                                   .withStatus(new V1beta1CustomResourceDefinitionStatus())
