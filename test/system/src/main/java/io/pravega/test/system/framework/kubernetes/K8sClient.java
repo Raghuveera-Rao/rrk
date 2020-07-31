@@ -708,6 +708,30 @@ public class K8sClient {
     }
 
     /**
+     * Method to fetch the status of all services which match a label.
+     * @param namespace Namespace on which the service(s) reside.
+     * @param labelName Name of the label.
+     * @param labelValue Value of the label.
+     * @return Future representing the list of service status.
+     */
+    @SneakyThrows(ApiException.class)
+    public CompletableFuture<List<V1ServiceSpec>> getServicesWithLabel(String namespace, String labelName, String labelValue) {
+        CoreV1Api api = new CoreV1Api();
+        log.debug("Current number of http interceptors {}", api.getApiClient().getHttpClient().networkInterceptors().size());
+
+        String labelSelector = labelName+"="+labelValue ;
+        K8AsyncCallback<V1ServiceList> callback = new K8AsyncCallback<>("listServices");
+        api.listNamespacedServiceAsync(namespace, PRETTY_PRINT, ALLOW_WATCH_BOOKMARKS, null, null, labelSelector, null,
+                null, null, false, callback);
+
+        return callback.getFuture().thenApply(V1ServiceList -> {
+            List<V1Service> serviceList = V1ServiceList.getItems();
+            log.debug("{} service(s) found with label {}={}.", serviceList.size(), labelName, labelValue);
+            return serviceList.stream().map(V1Service::getSpec).collect(Collectors.toList());
+        });
+    }
+
+    /**
      * Close resources used by KUBERNETES client.
      */
     public void close() {

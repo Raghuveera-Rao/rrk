@@ -59,6 +59,15 @@ public interface Service {
     public List<URI> getServiceDetails();
 
     /**
+     * Get the list of Host:port URIs where the external service is running.
+     *
+     *  @return List of {@link URI}s where the external service is running.
+     */
+    public default List<URI> getExternalServiceDetails(){
+        return null;
+    }
+
+    /**
      * Scale service to the new instance count.
      *
      * Increasing instance count will result in new deployments while decreasing the instance count will result in
