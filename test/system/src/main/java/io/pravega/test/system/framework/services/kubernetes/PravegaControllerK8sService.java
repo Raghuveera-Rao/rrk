@@ -89,7 +89,7 @@ public class PravegaControllerK8sService extends AbstractService {
         //fetch the URI.
         return Futures.getAndHandleExceptions(k8sClient.getServicesWithLabel(NAMESPACE, "component", PRAVEGA_CONTROLLER_LABEL)
                         .thenApply(statuses -> statuses.stream()
-                                .filter(s-> s.getLoadBalancerIP()!=null)
+                                //.filter(s-> s.getLoadBalancerIP()!=null)
                                 .flatMap(s -> Stream.of(URI.create(TCP + s.getLoadBalancerIP() + ":" + CONTROLLER_GRPC_PORT),
                                         URI.create(TCP + s.getLoadBalancerIP() + ":" + CONTROLLER_REST_PORT)))
                                 .collect(Collectors.toList())),

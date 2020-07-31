@@ -727,6 +727,10 @@ public class K8sClient {
         return callback.getFuture().thenApply(V1ServiceList -> {
             List<V1Service> serviceList = V1ServiceList.getItems();
             log.debug("{} service(s) found with label {}={}.", serviceList.size(), labelName, labelValue);
+            log.debug("Service spec {}",serviceList.get(0).getSpec());
+            log.debug("Ext IPs {}",serviceList.get(0).getSpec().getExternalIPs());
+            log.debug("LoadBalancer IP {}",serviceList.get(0).getSpec().getLoadBalancerIP());
+            log.debug("Cluster IP {}",serviceList.get(0).getSpec().getClusterIP());
             return serviceList.stream().map(V1Service::getSpec).collect(Collectors.toList());
         });
     }
