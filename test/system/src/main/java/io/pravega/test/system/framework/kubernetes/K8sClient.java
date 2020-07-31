@@ -715,7 +715,7 @@ public class K8sClient {
      * @return Future representing the list of service status.
      */
     @SneakyThrows(ApiException.class)
-    public CompletableFuture<List<V1ServiceSpec>> getServicesWithLabel(String namespace, String labelName, String labelValue) {
+    public CompletableFuture<List<V1ServiceStatus>> getServicesWithLabel(String namespace, String labelName, String labelValue) {
         CoreV1Api api = new CoreV1Api();
         log.debug("Current number of http interceptors {}", api.getApiClient().getHttpClient().networkInterceptors().size());
 
@@ -727,11 +727,8 @@ public class K8sClient {
         return callback.getFuture().thenApply(V1ServiceList -> {
             List<V1Service> serviceList = V1ServiceList.getItems();
             log.debug("{} service(s) found with label {}={}.", serviceList.size(), labelName, labelValue);
-            log.debug("Service spec {}",serviceList.get(0).getSpec());
-            log.debug("Ext IPs {}",serviceList.get(0).getSpec().getExternalIPs());
-            log.debug("LoadBalancer IP {}",serviceList.get(0).getSpec().getLoadBalancerIP());
-            log.debug("Cluster IP {}",serviceList.get(0).getSpec().getClusterIP());
-            return serviceList.stream().map(V1Service::getSpec).collect(Collectors.toList());
+            log.debug("Ingress details {}",serviceList.get(0).getStatus().getLoadBalancer().getIngress());
+            return serviceList.stream().map(V1Service::getStatus).collect(Collectors.toList());
         });
     }
 
