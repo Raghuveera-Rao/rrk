@@ -52,8 +52,8 @@ public class ExternalConnectionTest extends AbstractSystemTest {
     private static String restServerURI;
     private static Service conService;
     private static URI controllerRESTUri;
-    private static final String scopeName = "ScopeForScopeStreamBasicTest";
-    private static final String streamName = "StreamForScopeStreamBasicTest";
+    private static final String scopeName = "ScopeForScopeStreamBasicTest1";
+    private static final String streamName = "StreamForScopeStreamBasicTest1";
     private static Service segmentStoreInstance;
 
     public ExternalConnectionTest() {
@@ -77,7 +77,7 @@ public class ExternalConnectionTest extends AbstractSystemTest {
      * @throws MarathonException    when error in setup
      * @throws URISyntaxException   If URI is invalid
      */
-    @Environment
+    @BeforeClass
     public static void initialize() throws MarathonException {
         URI zkUri = startZookeeperInstance();
         startBookkeeperInstances(zkUri);
