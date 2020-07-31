@@ -54,6 +54,7 @@ public class ExternalConnectionTest extends AbstractSystemTest {
     private static URI controllerRESTUri;
     private static final String scopeName = "ScopeForScopeStreamBasicTest";
     private static final String streamName = "StreamForScopeStreamBasicTest";
+    private static Service segmentStoreInstance;
 
     public ExternalConnectionTest() {
 
@@ -82,6 +83,7 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         startBookkeeperInstances(zkUri);
         URI controllerUri = ensureControllerRunning(zkUri);
         ensureSegmentStoreRunning(zkUri, controllerUri);
+        segmentStoreInstance = Utils.createPravegaSegmentStoreService(zkUri, controllerUri);
     }
 
     @Before
@@ -91,6 +93,12 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         controllerRESTUri = ctlURIs.get(1);
         restServerURI = "http://" + controllerRESTUri.getHost() + ":" + controllerRESTUri.getPort();
         log.info("REST Server URI: {}", restServerURI);
+    }
+
+    @Test
+    public void testSSExternalIP(){
+        List<URI> ssURIs = segmentStoreInstance.getExternalServiceDetails();
+        log.info("SS uri's",ssURIs);
     }
 
     @Test

@@ -727,7 +727,6 @@ public class K8sClient {
         return callback.getFuture().thenApply(V1ServiceList -> {
             List<V1Service> serviceList = V1ServiceList.getItems();
             log.debug("{} service(s) found with label {}={}.", serviceList.size(), labelName, labelValue);
-            log.debug("Ingress details {}",serviceList.get(0).getStatus().getLoadBalancer().getIngress());
             return serviceList.stream().map(V1Service::getStatus).collect(Collectors.toList());
         });
     }
