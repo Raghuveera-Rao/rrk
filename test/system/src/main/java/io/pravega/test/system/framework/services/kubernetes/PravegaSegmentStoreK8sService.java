@@ -86,8 +86,8 @@ public class PravegaSegmentStoreK8sService extends AbstractService {
         //fetch the URI.
         return Futures.getAndHandleExceptions(k8sClient.getServicesWithLabel(NAMESPACE, "component", PRAVEGA_SEGMENTSTORE_LABEL)
                         .thenApply(statuses -> statuses.stream()
-                                .filter(s-> s.getLoadBalancerIP()!=null)
-                                .map(s -> URI.create(TCP + s.getLoadBalancerIP() + ":" + SEGMENTSTORE_PORT))
+                                .filter(s->  s.getLoadBalancer().getIngress()!=null)
+                                .map(s -> URI.create(TCP + s.getLoadBalancer().getIngress().get(0).getIp() + ":" + SEGMENTSTORE_PORT))
                                 .collect(Collectors.toList())),
                 t -> new TestFrameworkException(RequestFailed, "Failed to fetch ServiceDetails for pravega-segmentstore", t));
     }
