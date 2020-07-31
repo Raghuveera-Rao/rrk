@@ -84,8 +84,6 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         URI controllerUri = ensureControllerRunning(zkUri);
         ensureSegmentStoreRunning(zkUri, controllerUri);
         segmentStoreInstance = Utils.createPravegaSegmentStoreService(zkUri, controllerUri);
-        List<URI> ssURIs = segmentStoreInstance.getExternalServiceDetails();
-        log.info("SS uri ",ssURIs);
     }
 
     @Before
@@ -95,6 +93,12 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         controllerRESTUri = ctlURIs.get(1);
         restServerURI = "http://" + controllerRESTUri.getHost() + ":" + controllerRESTUri.getPort();
         log.info("REST Server URI: {}", restServerURI);
+    }
+
+    @Test
+    public void testSS(){
+        List<URI> ssURIs = segmentStoreInstance.getExternalServiceDetails();
+        log.info("SS uri: {}",ssURIs);
     }
 
     @Test
