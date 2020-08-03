@@ -52,8 +52,8 @@ public class ExternalConnectionTest extends AbstractSystemTest {
     private static String restServerURI;
     private static Service conService;
     private static URI controllerRESTUri;
-    private static final String scopeName = "ScopeForScopeStreamBasicTest2";
-    private static final String streamName = "StreamForScopeStreamBasicTest2";
+    private static final String scopeName = "Scope"+System.currentTimeMillis();
+    private static final String streamName = "StreamForScopeStreamBasicTest";
     private static Service segmentStoreInstance;
 
     public ExternalConnectionTest() {
