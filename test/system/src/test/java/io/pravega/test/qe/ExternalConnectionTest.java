@@ -101,7 +101,7 @@ public class ExternalConnectionTest extends AbstractSystemTest {
     @Test
     public void testSS_ExternalIP(){
         List<URI> ssURIs = segmentStoreInstance.getExternalServiceDetails();
-        assertEquals("SS getExternalServiceDetails status ",1, ssURIs.size());
+        assertEquals("SS getExternalServiceDetails status ",2, ssURIs.size());
         log.info("SS uri: {}",ssURIs);
     }
 
