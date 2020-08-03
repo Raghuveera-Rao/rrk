@@ -10,6 +10,7 @@
 package io.pravega.test.system.framework.services;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -64,7 +65,7 @@ public interface Service {
      *  @return List of {@link URI}s where the external service is running.
      */
     public default List<URI> getExternalServiceDetails(){
-        return null;
+        return Collections.EMPTY_LIST;
     }
 
     /**

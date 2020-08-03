@@ -52,8 +52,8 @@ public class ExternalConnectionTest extends AbstractSystemTest {
     private static String restServerURI;
     private static Service conService;
     private static URI controllerRESTUri;
-    private static final String scopeName = "ScopeForScopeStreamBasicTest1";
-    private static final String streamName = "StreamForScopeStreamBasicTest1";
+    private static final String scopeName = "ScopeForScopeStreamBasicTest2";
+    private static final String streamName = "StreamForScopeStreamBasicTest2";
     private static Service segmentStoreInstance;
 
     public ExternalConnectionTest() {
@@ -84,24 +84,28 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         URI controllerUri = ensureControllerRunning(zkUri);
         ensureSegmentStoreRunning(zkUri, controllerUri);
         segmentStoreInstance = Utils.createPravegaSegmentStoreService(zkUri, controllerUri);
-    }
 
-    @Before
-    public void setup() {
         conService = Utils.createPravegaControllerService(null);
         List<URI> ctlURIs = conService.getExternalServiceDetails();
+        assertEquals("controller getExternalServiceDetails status ",2, ctlURIs.size());
         controllerRESTUri = ctlURIs.get(1);
         restServerURI = "http://" + controllerRESTUri.getHost() + ":" + controllerRESTUri.getPort();
         log.info("REST Server URI: {}", restServerURI);
     }
 
-    @Test
-    public void testSS(){
-        List<URI> ssURIs = segmentStoreInstance.getExternalServiceDetails();
-        log.info("SS uri: {}",ssURIs);
+    //@Before
+    public void setup() {
+
     }
 
     @Test
+    public void testSS_ExternalIP(){
+        List<URI> ssURIs = segmentStoreInstance.getExternalServiceDetails();
+        assertEquals("SS getExternalServiceDetails status ",1, ssURIs.size());
+        log.info("SS uri: {}",ssURIs);
+    }
+
+    //@Test
     public void scopeStreamBasicTests(){
         test1_createScope();
         test2_getDetailsOfScope();
@@ -112,7 +116,8 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         test7_deleteScope();
     }
 
-    private void test1_createScope() {
+    @Test
+    public void test1_createScope() {
         CreateScopeRequest createScopeRequest = new CreateScopeRequest();
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes").toString();
         webTarget = client.target(resourceURl);
@@ -126,7 +131,8 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         log.info("Create scope: {} successful ", scopeName);
     }
 
-    private void test2_getDetailsOfScope() {
+    @Test
+    public void test2_getDetailsOfScope() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName).toString();
         Response response = client.target(resourceURl).request().get();
         assertEquals("Get scope status", OK.getStatusCode(), response.getStatus());
@@ -134,7 +140,8 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         log.info("Get scope successful");
     }
 
-    private void test3_createStream() {
+    @Test
+    public void test3_createStream() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams").toString();
         webTarget = client.target(resourceURl);
 
@@ -163,7 +170,8 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         log.info("Create stream: {} successful", streamName);
     }
 
-    private void test4_getDetailsOfStream() {
+    @Test
+    public void test4_getDetailsOfStream() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams").toString();
         webTarget = client.target(resourceURl);
         Invocation.Builder builder = webTarget.request();
@@ -173,7 +181,8 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         log.info("List streams successful");
     }
 
-    private void test5_updateStreamState() {
+    @Test
+    public void test5_updateStreamState() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams/" + streamName + "/state")
                 .toString();
         StreamState streamState = new StreamState();
@@ -186,7 +195,8 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         log.info("Update stream state successful");
     }
 
-    private void test6_deleteStream() {
+    @Test
+    public void test6_deleteStream() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName + "/streams/" + streamName)
                 .toString();
         Response response = client.target(resourceURl).request().delete();
@@ -194,7 +204,8 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         log.info("Delete stream successful");
     }
 
-    private void test7_deleteScope() {
+    @Test
+    public void test7_deleteScope() {
         resourceURl = new StringBuilder(restServerURI).append("/v1/scopes/" + scopeName).toString();
         Response response = client.target(resourceURl).request().delete();
         assertEquals("Get scope status", NO_CONTENT.getStatusCode(), response.getStatus());
