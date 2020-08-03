@@ -152,13 +152,13 @@ public class ExternalConnectionTest extends AbstractSystemTest {
         scalingConfig.scaleFactor(2);
         scalingConfig.minSegments(2);
 
-        RetentionConfig retentionConfig = new RetentionConfig();
-        retentionConfig.setType(RetentionConfig.TypeEnum.LIMITED_DAYS);
-        retentionConfig.setValue(123L);
+        //RetentionConfig retentionConfig = new RetentionConfig();
+        //retentionConfig.setType(RetentionConfig.TypeEnum.LIMITED_DAYS);
+        //retentionConfig.setValue(123L);
 
         createStreamRequest.setStreamName(streamName);
         createStreamRequest.setScalingPolicy(scalingConfig);
-        createStreamRequest.setRetentionPolicy(retentionConfig);
+        //createStreamRequest.setRetentionPolicy(retentionConfig);
 
         Invocation.Builder builder = webTarget.request(MediaType.APPLICATION_JSON_TYPE);
         Response response = builder.post(Entity.json(createStreamRequest));
